@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Pulse",
+    "slug": "pulse",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#14131F"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pulse.app"
+    },
+    "android": {
+      "package": "com.pulse.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#14131F"
+      }
+    },
+    "plugins": ["expo-notifications"]
+  }
+}
