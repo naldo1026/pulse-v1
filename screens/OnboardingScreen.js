@@ -157,7 +157,7 @@ export default function OnboardingScreen({ onFinish }) {
                     value={songs[f.key]}
                     onChangeText={(t) => setSongs((s) => ({ ...s, [f.key]: t }))}
                     placeholder="Song, Artist"
-                    placeholderTextColor="#6b6880"
+                    placeholderTextColor={COLORS.muted}
                     style={styles.input}
                   />
                 </View>

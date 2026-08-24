@@ -7,7 +7,7 @@
     "userInterfaceStyle": "dark",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#14131F"
+      "backgroundColor": "#050D1A"
     },
     "ios": {
       "supportsTablet": false,
@@ -16,9 +16,12 @@
     "android": {
       "package": "com.pulse.app",
       "adaptiveIcon": {
-        "backgroundColor": "#14131F"
+        "backgroundColor": "#050D1A"
       }
     },
-    "plugins": ["expo-notifications"]
+    "plugins": [
+      "expo-notifications",
+      "expo-font"
+    ]
   }
 }

@@ -1,18 +1,18 @@
 // Design tokens. Single source of truth. Don't inline hex values in screens.
 
 export const COLORS = {
-  ink: "#14131F",
-  card: "#1D1B2B",
-  line: "#2C2941",
-  ember: "#FF6B4A",
-  gold: "#F4C77B",
-  mint: "#7FE7C4",
+  ink: "#050D1A",
+  card: "#0C1B30",
+  line: "#16304F",
+  ember: "#2C5580",
+  gold: "#B8934A",
+  mint: "#1B5FC0",
   spotify: "#1DB954",
-  paper: "#EDEAE3",
-  muted: "#8B889C",
-  trackBg: "#100F19",
-  flame: "#35C7FF",
-  flameLight: "#DFF6FF",
+  paper: "#EDEFF2",
+  muted: "#6E85A0",
+  trackBg: "#030811",
+  flame: "#D4AF5A",
+  flameLight: "#EFE2C4",
 };
 
 // Top to bottom. Mint at full, ember at empty.
