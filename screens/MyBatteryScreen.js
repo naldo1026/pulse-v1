@@ -49,16 +49,14 @@ export default function MyBatteryScreen({ mbti }) {
         <Text style={styles.eyebrow}>SOCIAL BATTERY</Text>
         <Text style={styles.greeting}>Evening</Text>
 
-        <View style={styles.gaugeRow}>
+        <View style={styles.gaugeBlock}>
           <BatteryGauge level={level} onChange={setLevel} />
-          <View style={{ marginLeft: 22, flex: 1 }}>
-            <Text style={[styles.readout, { color }]}>
-              {level}
-              <Text style={styles.readoutPct}>%</Text>
-            </Text>
-            <Text style={styles.statusLabel}>{status.label}</Text>
-            <Text style={styles.statusSub}>{status.sub}</Text>
-          </View>
+          <Text style={[styles.readout, { color }]}>
+            {level}
+            <Text style={styles.readoutPct}>%</Text>
+          </Text>
+          <Text style={styles.statusLabel}>{status.label}</Text>
+          <Text style={styles.statusSub}>{status.sub}</Text>
         </View>
 
         <Text style={styles.hint}>Drag the cell, or tap a level below</Text>
@@ -238,12 +236,12 @@ export default function MyBatteryScreen({ mbti }) {
 const styles = StyleSheet.create({
   scroll: { padding: 20, paddingTop: 60, paddingBottom: 40 },
   eyebrow: { color: COLORS.muted, fontSize: 11, letterSpacing: 2, fontFamily: FONTS.mono },
-  greeting: { color: COLORS.paper, fontSize: 22, fontFamily: FONTS.display, marginTop: 4, marginBottom: 24 },
-  gaugeRow: { flexDirection: "row", alignItems: "center" },
-  readout: { fontSize: 44, fontFamily: FONTS.mono },
-  readoutPct: { fontSize: 20, opacity: 0.7 },
-  statusLabel: { color: COLORS.paper, fontSize: 15, fontFamily: FONTS.bodyBold, marginTop: 10 },
-  statusSub: { color: COLORS.muted, fontSize: 12, marginTop: 4, lineHeight: 17 },
+  greeting: { color: COLORS.paper, fontSize: 24, fontFamily: FONTS.display, marginTop: 4, marginBottom: 18 },
+  gaugeBlock: { alignItems: "center", marginTop: 4 },
+  readout: { fontSize: 52, fontFamily: FONTS.mono, marginTop: 20 },
+  readoutPct: { fontSize: 24, opacity: 0.7 },
+  statusLabel: { color: COLORS.paper, fontSize: 18, fontFamily: FONTS.display, marginTop: 8, textAlign: "center" },
+  statusSub: { color: COLORS.muted, fontSize: 13, marginTop: 5, lineHeight: 19, textAlign: "center" },
   hint: { color: COLORS.muted, fontSize: 11, marginTop: 16, textAlign: "center" },
   presetRow: { flexDirection: "row", gap: 8, marginTop: 10, justifyContent: "center" },
   presetBtn: {

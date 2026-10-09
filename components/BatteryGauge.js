@@ -3,32 +3,21 @@ import { View, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withRepeat,
-  withTiming,
-  runOnJS,
+  useSharedValue, useAnimatedStyle, withSpring, withRepeat, withTiming, runOnJS,
 } from "react-native-reanimated";
 import { COLORS, GRADIENT_COLORS } from "../theme";
 
-export default function BatteryGauge({ level, onChange, width = 84, height = 260 }) {
+export default function BatteryGauge({ level, onChange, width = 96, height = 260 }) {
   const heightPct = useSharedValue(level);
   const [dragging, setDragging] = useState(false);
-  const flicker = useSharedValue(0.8);
+  const flicker = useSharedValue(0.85);
 
   useEffect(() => {
-    // Snap instantly while dragging so the flame tracks the finger,
-    // spring back into place on release.
     heightPct.value = dragging ? level : withSpring(level, { damping: 14, stiffness: 120 });
   }, [level, dragging]);
 
   useEffect(() => {
-    if (dragging) {
-      flicker.value = withRepeat(withTiming(1, { duration: 280 }), -1, true);
-    } else {
-      flicker.value = 0.8;
-    }
+    flicker.value = dragging ? withRepeat(withTiming(1, { duration: 260 }), -1, true) : 0.85;
   }, [dragging]);
 
   const setLevelFromY = (y) => {
@@ -39,14 +28,18 @@ export default function BatteryGauge({ level, onChange, width = 84, height = 260
   };
 
   const pan = Gesture.Pan()
-    .onBegin((e) => {
-      runOnJS(setDragging)(true);
-      setLevelFromY(e.y);
-    })
+    .onBegin((e) => { runOnJS(setDragging)(true); setLevelFromY(e.y); })
     .onUpdate((e) => setLevelFromY(e.y))
     .onFinalize(() => runOnJS(setDragging)(false));
 
+  // Bottom-anchored window onto a FULL-height gradient. The inner view is
+  // pushed up by the empty amount so the colour at any fill height is the
+  // colour that belongs there. This is what was inverted before.
   const maskStyle = useAnimatedStyle(() => ({ height: `${heightPct.value}%` }));
+  const innerStyle = useAnimatedStyle(() => ({
+    height,
+    marginTop: -(height * (1 - heightPct.value / 100)),
+  }));
   const flameStyle = useAnimatedStyle(() => ({
     bottom: `${heightPct.value}%`,
     opacity: flicker.value,
@@ -56,21 +49,21 @@ export default function BatteryGauge({ level, onChange, width = 84, height = 260
     <GestureDetector gesture={pan}>
       <View style={[styles.track, { width, height }]}>
         <View style={styles.nub} />
-
         {[25, 50, 75].map((t) => (
           <View key={t} style={[styles.tick, { bottom: `${t}%` }]} />
         ))}
 
         <Animated.View style={[styles.mask, maskStyle]}>
-          <LinearGradient
-            colors={GRADIENT_COLORS}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-            style={{ position: "absolute", bottom: 0, left: 0, right: 0, height }}
-          />
+          <Animated.View style={innerStyle}>
+            <LinearGradient
+              colors={GRADIENT_COLORS}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={{ flex: 1 }}
+            />
+          </Animated.View>
         </Animated.View>
 
-        {/* thin blue flame riding the fill edge while dragging */}
         {dragging && level > 0 && level < 100 && (
           <Animated.View style={[styles.flameWrap, flameStyle]} pointerEvents="none">
             <LinearGradient
@@ -89,34 +82,18 @@ export default function BatteryGauge({ level, onChange, width = 84, height = 260
 
 const styles = StyleSheet.create({
   track: {
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: COLORS.line,
-    backgroundColor: COLORS.trackBg,
-    overflow: "hidden",
-    position: "relative",
+    borderRadius: 18, borderWidth: 2, borderColor: COLORS.line,
+    backgroundColor: COLORS.trackBg, overflow: "hidden", position: "relative",
   },
   nub: {
-    position: "absolute",
-    top: -10,
-    left: "50%",
-    marginLeft: -14,
-    width: 28,
-    height: 8,
-    backgroundColor: COLORS.line,
-    borderRadius: 4,
+    position: "absolute", top: -10, left: "50%", marginLeft: -16,
+    width: 32, height: 8, backgroundColor: COLORS.line, borderRadius: 4, zIndex: 2,
   },
-  tick: { position: "absolute", left: 0, right: 0, height: 1, backgroundColor: "rgba(237,234,227,0.08)" },
+  tick: { position: "absolute", left: 0, right: 0, height: 1, backgroundColor: "rgba(242,240,234,0.07)" },
   mask: { position: "absolute", bottom: 0, left: 0, right: 0, overflow: "hidden" },
   flameWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 3,
-    marginBottom: -1.5,
-    shadowColor: COLORS.flame,
-    shadowOpacity: 0.9,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 0 },
+    position: "absolute", left: 0, right: 0, height: 3, marginBottom: -1.5,
+    shadowColor: COLORS.flame, shadowOpacity: 1, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 }, zIndex: 3,
   },
 });
