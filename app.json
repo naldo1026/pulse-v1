@@ -7,7 +7,7 @@
     "userInterfaceStyle": "dark",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#0A0A14"
+      "backgroundColor": "#0A0716"
     },
     "ios": {
       "supportsTablet": false,
@@ -16,7 +16,7 @@
     "android": {
       "package": "com.pulse.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0A0A14"
+        "backgroundColor": "#0A0716"
       }
     },
     "plugins": [

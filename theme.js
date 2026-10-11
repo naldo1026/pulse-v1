@@ -1,36 +1,33 @@
 // Design tokens. Single source of truth.
-// Brand: electric blue flame against deep ink. Battery runs coral (empty)
-// through amber (mid) to a vivid teal (full).
+// Dusk to dawn. Low is night and candlelight, not alarm. Full is sunrise.
+// Nothing in this ramp reads as an error state.
 
-export const COLORS = {
-  ink: "#0A0A14",
-  inkRaised: "#12121F",
-  card: "#181829",
-  line: "#2A2A42",
+export const INK = "#0A0716";
+export const PANEL = "#140F26";
 
-  // Battery scale. Saturated so it reads instantly at a glance.
-  ember: "#FF5C39",
-  gold: "#FFB627",
-  mint: "#2DE8A0",
+export const VIOLET = "#8B5CF6"; // low  — restful night
+export const ROSE = "#FF5D8F"; // mid  — warm dusk
+export const GOLD = "#FFC145"; // high — daylight
+export const AQUA = "#4CC9F0"; // cool accent, used for type/insight only
+export const PAPER = "#FBF7F0";
+export const SPOT = "#1DB954"; // spotify brand green
 
-  // Brand flame
-  flame: "#3AAFFF",
-  flameLight: "#B8E8FF",
-  flameDeep: "#0A4A8F",
-
-  spotify: "#1DB954",
-  paper: "#F2F0EA",
-  muted: "#7C7A92",
-  trackBg: "#0D0D18",
-};
-
-// Rendered TOP to BOTTOM inside the gauge: full = teal at top,
-// empty = coral at the bottom.
-export const GRADIENT_COLORS = [COLORS.mint, COLORS.gold, COLORS.ember];
+// Small-text scale. Three sizes only, so everything lines up.
+// micro 11 · small 12.5 · body 14. Nothing below 11 anywhere.
+export const T = { micro: 11, small: 12.5, body: 14 };
 
 export const FONTS = {
-  display: "SpaceGrotesk_600SemiBold",
-  body: "Inter_400Regular",
-  bodyBold: "Inter_600SemiBold",
-  mono: "JetBrainsMono_600SemiBold",
+  script: "Caveat_700Bold",
+  sans: "PlusJakartaSans_400Regular",
+  sansMedium: "PlusJakartaSans_500Medium",
+  sansSemiBold: "PlusJakartaSans_600SemiBold",
+  sansBold: "PlusJakartaSans_700Bold",
+  sansExtraBold: "PlusJakartaSans_800ExtraBold",
+  mono: "IBMPlexMono_400Regular",
+  monoMedium: "IBMPlexMono_500Medium",
+};
+
+export const rgba = (hex, a) => {
+  const h = hex.replace("#", "");
+  return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a})`;
 };
