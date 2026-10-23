@@ -6,6 +6,7 @@ import { PEOPLE, GROUPS, statusFor } from "../lib/data";
 import { Btn, Panel, Display, Segmented } from "../components/primitives";
 import Orb from "../components/Orb";
 import Icon from "../components/Icon";
+import LightStreak from "../components/LightStreak";
 
 const RING = 104;
 
@@ -35,8 +36,7 @@ function CirclePage({ people, me, ack, setAck, joined, setJoined, openSettings, 
             <View key={p.n} style={{ position: "absolute", left: "50%", top: "50%", marginLeft: Math.cos(a) * RING, marginTop: Math.sin(a) * RING }}>
               <Orb p={p} size={52} selected={sel === p.n} onPress={() => setSel(sel === p.n ? null : p.n)} />
               <View pointerEvents="none" style={{ position: "absolute", top: 32, left: -40, width: 80, alignItems: "center" }}>
-                {/* bg masks the ring line where it runs behind the name */}
-                <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.muted, backgroundColor: t.bg, paddingHorizontal: 4 }}>{p.n}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.muted }}>{p.n}</Text>
               </View>
             </View>
           );
@@ -55,7 +55,7 @@ function CirclePage({ people, me, ack, setAck, joined, setJoined, openSettings, 
         <Panel style={{ marginTop: 20 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
             <View style={{ flex: 1 }}>
-              <Display size={28}>{chosen.n}</Display>
+              <Display size={24}>{chosen.n}</Display>
               <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 2 }}>{chosen.note}</Text>
             </View>
             <View style={{ alignItems: "flex-end", paddingTop: 4 }}>
@@ -82,7 +82,7 @@ function CirclePage({ people, me, ack, setAck, joined, setJoined, openSettings, 
 
           <Pressable
             onPress={() => setAck((a) => ({ ...a, [chosen.n]: !a[chosen.n] }))}
-            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16, paddingVertical: 11, borderRadius: 14, borderWidth: 1, borderColor: t.lineStrong }}
+            style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16, paddingVertical: 11, borderRadius: 100, borderWidth: 1, borderColor: t.lineStrong }}
           >
             {ack[chosen.n] && <Icon name="check" size={16} color={t.ink} />}
             <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: ack[chosen.n] ? t.ink : t.muted }}>{ack[chosen.n] ? "Seen" : "Mark as seen"}</Text>
@@ -118,8 +118,9 @@ export default function CircleScreen({ ack, setAck, members, level, reason, want
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <LightStreak level={level} />
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: insets.top + 8, paddingHorizontal: 24 }}>
-        <Display size={26}>Circle</Display>
+        <Display size={24}>Circle</Display>
         <Pressable onPress={openSettings} hitSlop={12} accessibilityRole="button" accessibilityLabel="Settings">
           <Icon name="settings" color={t.muted} />
         </Pressable>

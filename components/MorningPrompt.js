@@ -11,10 +11,10 @@ export default function MorningPrompt({ onPick, onDismiss }) {
   const t = useTheme();
   return (
     <Sheet onDismiss={onDismiss}>
-      <Display size={30}>Morning. How are you feeling?</Display>
+      <Display size={26}>Morning. How are you feeling?</Display>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 20 }}>
         {OPTS.map(([l, v]) => (
-          <Pressable key={l} onPress={() => onPick(v)} style={{ flex: 1, alignItems: "center", paddingVertical: 16, borderRadius: 14, borderWidth: 1, borderColor: t.line }}>
+          <Pressable key={l} onPress={() => onPick(v)} style={{ flex: 1, alignItems: "center", paddingVertical: 16, borderRadius: 20, borderWidth: 1, borderColor: t.line }}>
             <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colorFor(v) }} />
             <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.ink, marginTop: 8 }}>{l}</Text>
           </Pressable>

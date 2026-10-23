@@ -33,7 +33,7 @@ export default function SettingsScreen({
     <Modal transparent={false} animationType="slide" visible onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: t.bg }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: insets.top + 16, paddingHorizontal: 24 }}>
-          <Display size={26}>Settings</Display>
+          <Display size={24}>Settings</Display>
           <Pressable onPress={onClose} hitSlop={12}>
             <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: t.ink }}>Done</Text>
           </Pressable>
@@ -71,7 +71,7 @@ export default function SettingsScreen({
               {MBTI.map((k) => {
                 const on = mbti === k;
                 return (
-                  <Pressable key={k} onPress={() => setMbti(on ? null : k)} style={{ width: "23.5%", paddingVertical: 10, borderRadius: 10, alignItems: "center", backgroundColor: on ? t.ink : t.surface, borderWidth: 1, borderColor: on ? t.ink : t.line }}>
+                  <Pressable key={k} onPress={() => setMbti(on ? null : k)} style={{ width: "23.5%", paddingVertical: 10, borderRadius: 100, alignItems: "center", backgroundColor: on ? t.ink : t.surface, borderWidth: 1, borderColor: on ? t.ink : t.line }}>
                     <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, letterSpacing: 0.4, color: on ? t.inverse : t.muted }}>{k}</Text>
                   </Pressable>
                 );

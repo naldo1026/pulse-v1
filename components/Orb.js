@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Pressable } from "react-native";
 import Svg, { Circle } from "react-native-svg";
-import { useTheme, FONTS } from "../theme";
+import { useTheme, FONTS, rgba } from "../theme";
 import { colorFor } from "../lib/data";
 
 export default function Orb({ p, size, onPress, selected }) {
@@ -24,8 +24,9 @@ export default function Orb({ p, size, onPress, selected }) {
       <View
         style={{
           position: "absolute", inset: gap, borderRadius: size / 2,
-          backgroundColor: t.surface,
-          borderWidth: selected ? 1.5 : 1, borderColor: selected ? t.ink : t.line,
+          // tinted with their level so the ring reads at a glance
+          backgroundColor: rgba(c, t.scheme === "dark" ? 0.22 : 0.18),
+          borderWidth: 1.5, borderColor: selected ? t.ink : "transparent",
           alignItems: "center", justifyContent: "center",
         }}
       >

@@ -109,7 +109,7 @@ export default function LiquidCell({ level, onChange, w = CELL_W, h = CELL_H, sh
 
   const durMul = dragging ? 0.36 : 1;
   const waves = level > 2 && level < 99;
-  const numStyle = { fontFamily: FONTS.sans, fontSize: numSize, letterSpacing: -numSize * 0.04, fontVariant: ["tabular-nums"] };
+  const numStyle = { fontFamily: FONTS.medium, fontSize: numSize, letterSpacing: -numSize * 0.04, fontVariant: ["tabular-nums"] };
 
   return (
     <View style={{ width: w, height: h }}>
@@ -117,7 +117,7 @@ export default function LiquidCell({ level, onChange, w = CELL_W, h = CELL_H, sh
       <View style={{ position: "absolute", top: -6, left: w / 2 - w * 0.14, width: w * 0.28, height: 6, borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: t.lineStrong }} />
 
       <GestureDetector gesture={pan}>
-        <View style={{ position: "absolute", inset: 0, borderRadius: radius, backgroundColor: t.surface, borderWidth: 1, borderColor: t.lineStrong }}>
+        <View style={[{ position: "absolute", inset: 0, borderRadius: radius, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line }, t.shadow]}>
           <View style={{ position: "absolute", inset: WALL - 1, borderRadius: radius - WALL, overflow: "hidden", backgroundColor: t.sunk }}>
             {/* --- the fluid ---
                 The body starts just below the front swell's deepest trough,

@@ -1,12 +1,14 @@
 import React, { useEffect } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { useSharedValue, useAnimatedStyle, withSequence, withTiming } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle } from "react-native-reanimated";
 import { useTheme, FONTS, T } from "../theme";
 import { GROUPS, REASONS, statusFor } from "../lib/data";
 import { Btn, Label, Chip, Display, Segmented, Toggle } from "../components/primitives";
 import LiquidCell from "../components/LiquidCell";
 import Icon from "../components/Icon";
+import LightStreak from "../components/LightStreak";
+import { heartbeat } from "../components/PulseBurst";
 
 const WINDOWS = [["an hour", "For an hour"], ["till 10", "Till 10"], ["all evening", "All evening"]];
 
@@ -24,14 +26,16 @@ export default function YouScreen({
 
   const pulse = useSharedValue(1);
   useEffect(() => {
-    if (sent) pulse.value = withSequence(withTiming(1.04, { duration: 140 }), withTiming(1, { duration: 140 }), withTiming(1.04, { duration: 140 }), withTiming(1, { duration: 140 }));
+    // Same lub-dub timeline as the screen burst and the haptics.
+    if (sent) pulse.value = heartbeat(1, 1.04, 1.03);
   }, [sent]);
   const pulseStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <LightStreak level={level} />
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: insets.top + 8, paddingHorizontal: 24 }}>
-        <Display size={26}>Pulse</Display>
+        <Display size={24}>Pulse</Display>
         <Pressable onPress={openSettings} hitSlop={12} accessibilityRole="button" accessibilityLabel="Settings">
           <Icon name="settings" color={t.muted} />
         </Pressable>
@@ -42,7 +46,7 @@ export default function YouScreen({
           <Animated.View style={pulseStyle}>
             <LiquidCell level={level} onChange={setLevel} w={128} h={244} />
           </Animated.View>
-          <Display size={44} style={{ marginTop: 24 }}>{s.t}</Display>
+          <Display size={40} style={{ marginTop: 24 }}>{s.t}</Display>
           <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 2 }}>{s.s}</Text>
           <Pressable onPress={openQuiz} hitSlop={8} style={{ marginTop: 12 }}>
             <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.faint, textDecorationLine: "underline" }}>Not sure?</Text>

@@ -37,9 +37,9 @@ export default function PeopleEditor({ members, setMembers, suggestions = [] }) 
           placeholder={groupFull ? "This group is full" : "Add a name"}
           editable={!groupFull}
           placeholderTextColor={t.faint}
-          style={{ flex: 1, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 12, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, color: t.ink, fontFamily: FONTS.sans, fontSize: T.body }}
+          style={{ flex: 1, paddingVertical: 13, paddingHorizontal: 18, borderRadius: 100, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, color: t.ink, fontFamily: FONTS.sans, fontSize: T.body }}
         />
-        <Pressable onPress={() => add(newName)} style={{ width: 46, borderRadius: 12, backgroundColor: newName.trim() ? t.ink : t.sunk, alignItems: "center", justifyContent: "center" }}>
+        <Pressable onPress={() => add(newName)} accessibilityRole="button" accessibilityLabel="Add" style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: newName.trim() ? t.ink : t.sunk, alignItems: "center", justifyContent: "center" }}>
           <Icon name="plus" color={newName.trim() ? t.inverse : t.faint} />
         </Pressable>
       </View>

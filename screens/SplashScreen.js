@@ -4,6 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withDelay, withSequence, wi
 import { useTheme } from "../theme";
 import { colorFor } from "../lib/data";
 import { Display } from "../components/primitives";
+import LightStreak from "../components/LightStreak";
 
 // Wordmark fades up, then a single soft beat on the dot beside it.
 export default function SplashScreen() {
@@ -24,10 +25,11 @@ export default function SplashScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg, alignItems: "center", justifyContent: "center" }}>
+      <LightStreak level={64} height={560} intensity={1.15} />
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Animated.View style={[{ width: 10, height: 10, borderRadius: 5, backgroundColor: colorFor(64) }, dotStyle]} />
         <Animated.View style={wordStyle}>
-          <Display size={48}>Pulse</Display>
+          <Display size={40}>Pulse</Display>
         </Animated.View>
       </View>
     </View>

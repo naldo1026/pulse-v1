@@ -11,8 +11,7 @@
     "deploy": "bash scripts/deploy-pages.sh"
   },
   "dependencies": {
-    "@expo-google-fonts/instrument-serif": "^0.4.1",
-    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/roboto": "^0.4.3",
     "@expo/metro-runtime": "~6.1.2",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.17",

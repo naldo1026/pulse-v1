@@ -6,13 +6,11 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import { NavigationContainer, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useFonts } from "expo-font";
-// Per-weight imports: the package index pulls in all 18 Inter files, which
+// Per-weight imports: the package index pulls in every Roboto file, which
 // the web export then ships.
-import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
-import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
-import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
-import { InstrumentSerif_400Regular } from "@expo-google-fonts/instrument-serif/400Regular";
-import { InstrumentSerif_400Regular_Italic } from "@expo-google-fonts/instrument-serif/400Regular_Italic";
+import { Roboto_400Regular } from "@expo-google-fonts/roboto/400Regular";
+import { Roboto_500Medium } from "@expo-google-fonts/roboto/500Medium";
+import { Roboto_700Bold } from "@expo-google-fonts/roboto/700Bold";
 
 import SplashScreen from "./screens/SplashScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -23,18 +21,19 @@ import SettingsScreen from "./screens/SettingsScreen";
 import PulseBurst from "./components/PulseBurst";
 import MorningPrompt from "./components/MorningPrompt";
 import VibeCheckModal from "./components/VibeCheckModal";
+import Icon from "./components/Icon";
 import { useTheme, FONTS, T } from "./theme";
-import { PEOPLE, setRamp, colorFor } from "./lib/data";
+import { PEOPLE, setRamp } from "./lib/data";
 
 const Tab = createBottomTabNavigator();
 
-const TAB_LABELS = { you: "Me", circle: "Circle", week: "Week" };
+const TABS = { you: ["Me", "battery"], circle: ["Circle", "circle"], week: ["Week", "week"] };
 
 function PulseTabBar({ state, navigation }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   return (
-    <View style={{ flexDirection: "row", paddingTop: 10, paddingBottom: insets.bottom + 8, backgroundColor: t.bg, borderTopWidth: 1, borderColor: t.line }}>
+    <View style={{ flexDirection: "row", paddingTop: 8, paddingBottom: insets.bottom + 6, backgroundColor: t.bg, borderTopWidth: 1, borderColor: t.line }}>
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
         const onPress = () => {
@@ -42,9 +41,9 @@ function PulseTabBar({ state, navigation }) {
           if (!isFocused && !event.defaultPrevented) navigation.navigate(route.name);
         };
         return (
-          <Pressable key={route.key} onPress={onPress} style={{ flex: 1, alignItems: "center", paddingVertical: 6 }}>
-            <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: isFocused ? t.ink : t.faint }}>{TAB_LABELS[route.name]}</Text>
-            <View style={{ width: 4, height: 4, borderRadius: 2, marginTop: 5, backgroundColor: isFocused ? t.ink : "transparent" }} />
+          <Pressable key={route.key} onPress={onPress} style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}>
+            <Icon name={TABS[route.name][1]} size={22} strokeWidth={isFocused ? 1.9 : 1.6} color={isFocused ? t.ink : t.faint} />
+            <Text style={{ fontFamily: FONTS.medium, fontSize: 11, marginTop: 3, color: isFocused ? t.ink : t.faint }}>{TABS[route.name][0]}</Text>
           </Pressable>
         );
       })}
@@ -55,8 +54,7 @@ function PulseTabBar({ state, navigation }) {
 export default function App() {
   const t = useTheme();
   const [fontsLoaded] = useFonts({
-    Inter_400Regular, Inter_500Medium, Inter_600SemiBold,
-    InstrumentSerif_400Regular, InstrumentSerif_400Regular_Italic,
+    Roboto_400Regular, Roboto_500Medium, Roboto_700Bold,
   });
 
   const [stage, setStage] = useState("splash");
@@ -171,7 +169,7 @@ export default function App() {
                   )}
                 </Tab.Screen>
                 <Tab.Screen name="week">
-                  {() => <WeekScreen mbti={mbti} />}
+                  {() => <WeekScreen mbti={mbti} level={level} />}
                 </Tab.Screen>
               </Tab.Navigator>
             </NavigationContainer>
@@ -186,7 +184,7 @@ export default function App() {
                 theme={theme} setTheme={setTheme}
               />
             )}
-            {burst > 0 && <PulseBurst key={burst} color={colorFor(level)} />}
+            {burst > 0 && <PulseBurst key={burst} level={level} />}
             {morning && <MorningPrompt onPick={(v) => { setLevel(v); setMorning(false); }} onDismiss={() => setMorning(false)} />}
             {quiz && <VibeCheckModal onDone={(v) => { setLevel(v); setQuiz(false); }} onSkip={() => setQuiz(false)} />}
           </View>

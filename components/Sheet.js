@@ -10,7 +10,7 @@ export default function Sheet({ onDismiss, children }) {
   return (
     <Modal transparent animationType="fade" visible onRequestClose={onDismiss}>
       <Pressable onPress={onDismiss} style={{ flex: 1, backgroundColor: t.scrim, justifyContent: "flex-end" }}>
-        <Pressable style={{ backgroundColor: t.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 10, paddingHorizontal: 24, paddingBottom: insets.bottom + 20 }}>
+        <Pressable style={{ backgroundColor: t.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingTop: 10, paddingHorizontal: 24, paddingBottom: insets.bottom + 20 }}>
           <View style={{ alignSelf: "center", width: 36, height: 4, borderRadius: 2, backgroundColor: t.lineStrong, marginBottom: 20 }} />
           {children}
         </Pressable>

@@ -30,12 +30,16 @@ git push -u origin main
 ## Structure
 
 ```
-theme.js                    Design tokens: light/dark palettes (useTheme), fonts, type
-                            scale. Ink on warm paper; the battery fluid is the only colour.
+theme.js                    Design tokens: light/dark palettes (useTheme), Roboto, type
+                            scale, soft shadow. Ink on near-white; colour comes only from
+                            the level (battery fluid and the background streak).
 lib/data.js                 Mock data, level colour ramps (THEMES), status copy.
 lib/haptics.js              Haptic tick/tap, no-ops on web.
 components/
-  primitives.js             Btn, Label, Panel, Chip, Display (serif), Segmented, Toggle.
+  primitives.js             Btn, Label, Panel, Chip, Display (bold heading), Segmented,
+                            Toggle. Buttons, chips and segments are pills.
+  LightStreak.js            Soft diagonal streak of light behind each screen's header,
+                            tinted by the current level. Drifts slowly.
   LiquidCell.js             The battery. Drag to set; waves, bubbles, haptic ticks.
   PulseBurst.js             Full-screen colour wash + haptics when a pulse is sent.
   Orb.js                    Person on the Circle ring, with a level arc.
@@ -70,6 +74,6 @@ Everything is local state. There is no backend yet.
 ## Gotchas
 
 - `react-native-reanimated/plugin` must be **last** in the babel plugins array. It's already set in `babel.config.js`. If gestures silently stop working, check this first.
-- Import fonts per weight (`@expo-google-fonts/inter/500Medium`), not from the package index, or the web export ships every weight.
+- Import fonts per weight (`@expo-google-fonts/roboto/500Medium`), not from the package index, or the web export ships every weight.
 - `GestureHandlerRootView` must wrap the app. Already done in `App.js`.
 - If you change `babel.config.js`, restart with `npx expo start -c` to clear the cache.

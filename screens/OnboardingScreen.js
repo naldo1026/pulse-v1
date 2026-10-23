@@ -9,6 +9,7 @@ import LiquidCell from "../components/LiquidCell";
 import VibeCheckModal from "../components/VibeCheckModal";
 import PeopleEditor from "../components/PeopleEditor";
 import Icon from "../components/Icon";
+import LightStreak from "../components/LightStreak";
 
 function FadeStep({ step, children }) {
   const fade = useSharedValue(0);
@@ -54,6 +55,7 @@ export default function OnboardingScreen({ onFinish }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <LightStreak level={step === 0 ? 64 : level} height={step === 0 ? 560 : 440} intensity={step === 0 ? 1.15 : 1} />
       <FadeStep step={step}>
         {step === 0 && (
           <View style={[{ flex: 1 }, pad]}>
@@ -61,7 +63,7 @@ export default function OnboardingScreen({ onFinish }) {
               <View pointerEvents="none">
                 <LiquidCell level={64} onChange={() => {}} w={72} h={136} showNum={false} />
               </View>
-              <Display size={56} style={{ marginTop: 36 }}>Pulse</Display>
+              <Display size={48} style={{ marginTop: 36 }}>Pulse</Display>
               <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, lineHeight: 22, color: t.muted, textAlign: "center", marginTop: 10, maxWidth: 290 }}>
                 Let the people closest to you know how you're feeling, without having to explain.
               </Text>
@@ -73,12 +75,12 @@ export default function OnboardingScreen({ onFinish }) {
         {step === 1 && (
           <View style={[{ flex: 1 }, pad]}>
             <TopBar step={1} onBack={() => setStep(0)} />
-            <Display size={36} style={{ marginTop: 24 }}>How are you feeling right now?</Display>
+            <Display size={32} style={{ marginTop: 24 }}>How are you feeling right now?</Display>
             <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 8 }}>Drag to set it. You can change it any time.</Text>
 
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
               <LiquidCell level={level} onChange={setLevel} w={124} h={236} />
-              <Display size={32} style={{ marginTop: 20 }}>{st.t}</Display>
+              <Display size={30} style={{ marginTop: 20 }}>{st.t}</Display>
               <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 2 }}>{st.s}</Text>
             </View>
 
@@ -91,7 +93,7 @@ export default function OnboardingScreen({ onFinish }) {
           <View style={[{ flex: 1 }, pad]}>
             <TopBar step={2} onBack={() => setStep(1)} />
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-              <Display size={36} style={{ marginTop: 24 }}>Who should see it?</Display>
+              <Display size={32} style={{ marginTop: 24 }}>Who should see it?</Display>
               <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 8 }}>Add a few people. You can change this later.</Text>
 
               <View style={{ marginTop: 24 }}>

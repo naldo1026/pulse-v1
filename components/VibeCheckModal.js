@@ -25,14 +25,14 @@ export default function VibeCheckModal({ onDone, onSkip }) {
         </Pressable>
       </View>
 
-      <Display size={30} style={{ marginTop: 8, marginBottom: 20 }}>{q.q}</Display>
+      <Display size={26} style={{ marginTop: 8, marginBottom: 20 }}>{q.q}</Display>
 
       <View style={{ gap: 8 }}>
         {q.o.map(([label, sub, v]) => (
           <Pressable
             key={label}
             onPress={() => pick(v)}
-            style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, borderWidth: 1, borderColor: t.line }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, paddingHorizontal: 18, borderRadius: 20, borderWidth: 1, borderColor: t.line }}
           >
             <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colorFor(v) }} />
             <View style={{ flex: 1 }}>

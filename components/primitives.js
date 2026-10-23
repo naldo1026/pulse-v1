@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
 import { useTheme, T, FONTS } from "../theme";
 
-// primary: solid ink. secondary: hairline outline. ghost: text only.
+// primary: solid ink pill. secondary: hairline outline. ghost: text only.
 export const Btn = ({ children, onPress, variant = "primary", style, textStyle, disabled }) => {
   const t = useTheme();
   const primary = variant === "primary";
@@ -13,9 +13,9 @@ export const Btn = ({ children, onPress, variant = "primary", style, textStyle, 
       disabled={disabled}
       style={({ pressed }) => [
         {
-          paddingVertical: 15,
-          paddingHorizontal: 20,
-          borderRadius: 14,
+          paddingVertical: 16,
+          paddingHorizontal: 22,
+          borderRadius: 100,
           alignItems: "center",
           backgroundColor: primary ? t.ink : "transparent",
           borderWidth: variant === "secondary" ? 1 : 0,
@@ -39,7 +39,7 @@ export const Label = ({ children, color, style }) => {
 
 export const Panel = ({ children, style }) => {
   const t = useTheme();
-  return <View style={[{ padding: 20, borderRadius: 20, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line }, style]}>{children}</View>;
+  return <View style={[{ padding: 20, borderRadius: 24, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line }, t.shadow, style]}>{children}</View>;
 };
 
 export const Chip = ({ children, on, onPress, disabled, style }) => {
@@ -65,12 +65,11 @@ export const Chip = ({ children, on, onPress, disabled, style }) => {
   );
 };
 
-// Serif display type. Instrument Serif runs small for its size, so these
-// sizes are larger than the sans equivalents would be.
-export const Display = ({ children, size = 32, color, italic, style }) => {
+// Bold headings. Tracking tightens with size so big words stay compact.
+export const Display = ({ children, size = 32, color, style }) => {
   const t = useTheme();
   return (
-    <Text style={[{ fontFamily: italic ? FONTS.displayItalic : FONTS.display, fontSize: size, lineHeight: Math.round(size * 1.12), letterSpacing: -0.2, color: color || t.ink }, style]}>
+    <Text style={[{ fontFamily: FONTS.display, fontSize: size, lineHeight: Math.round(size * 1.14), letterSpacing: -size * 0.03, color: color || t.ink }, style]}>
       {children}
     </Text>
   );
@@ -81,14 +80,14 @@ export const Display = ({ children, size = 32, color, italic, style }) => {
 export const Segmented = ({ options, value, onChange, style }) => {
   const t = useTheme();
   return (
-    <View style={[{ flexDirection: "row", padding: 3, borderRadius: 12, backgroundColor: t.sunk }, style]}>
+    <View style={[{ flexDirection: "row", padding: 3, borderRadius: 100, backgroundColor: t.sunk }, style]}>
       {options.map(([id, label]) => {
         const on = value === id;
         return (
           <Pressable
             key={id}
             onPress={() => onChange(id)}
-            style={{ flex: 1, alignItems: "center", paddingVertical: 8, paddingHorizontal: 4, borderRadius: 9, backgroundColor: on ? t.raised : "transparent", borderWidth: 1, borderColor: on ? t.line : "transparent" }}
+            style={[{ flex: 1, alignItems: "center", paddingVertical: 9, paddingHorizontal: 4, borderRadius: 100, backgroundColor: on ? t.raised : "transparent" }, on && t.shadow]}
           >
             <Text numberOfLines={1} style={{ fontFamily: on ? FONTS.medium : FONTS.sans, fontSize: T.small, color: on ? t.ink : t.muted }}>{label}</Text>
           </Pressable>
