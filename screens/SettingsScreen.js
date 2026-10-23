@@ -1,169 +1,126 @@
 import React, { useState } from "react";
-import { View, Text, Modal, ScrollView, Pressable, TextInput } from "react-native";
+import { View, Text, Modal, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { INK, PAPER, GOLD, AQUA, FONTS, T, rgba } from "../theme";
-import { GROUPS, MBTI, THEMES, RAMP, colorFor } from "../lib/data";
-import { Label, Panel, Script } from "../components/primitives";
+import { useTheme, FONTS, T } from "../theme";
+import { MBTI, MBTI_NOTE, THEMES, LIBRARY, SUGGESTED, stopsFor } from "../lib/data";
+import { Label, Panel, Display, Segmented, Toggle } from "../components/primitives";
+import PeopleEditor from "../components/PeopleEditor";
+import Icon from "../components/Icon";
 
-export default function SettingsScreen({ onClose, members, setMembers, mbti, setMbti, songs, morningTime, setMorningTime, theme, setTheme, level }) {
+const TIMES = [["07:00", "7:00"], ["07:40", "7:40"], ["08:30", "8:30"], ["off", "Off"]];
+const MOODS = [["low", "When you're low"], ["mid", "In between"], ["high", "When you're full"]];
+
+function Section({ title, children, note }) {
+  const t = useTheme();
+  return (
+    <View style={{ marginTop: 28 }}>
+      <Label style={{ marginLeft: 4, marginBottom: 8 }}>{title}</Label>
+      {children}
+      {note && <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.faint, marginTop: 8, marginHorizontal: 4 }}>{note}</Text>}
+    </View>
+  );
+}
+
+export default function SettingsScreen({
+  onClose, members, setMembers, mbti, setMbti, songs, setSongs, spotify, setSpotify,
+  morningTime, setMorningTime, theme, setTheme,
+}) {
+  const t = useTheme();
   const insets = useSafeAreaInsets();
-  const [newName, setNewName] = useState("");
-  const [addTo, setAddTo] = useState("household");
-
-  const add = () => {
-    const n = newName.trim();
-    if (n && !members.some((m) => m.n === n)) setMembers([...members, { n, g: addTo }]);
-    setNewName("");
-  };
+  const [openMood, setOpenMood] = useState(null);
 
   return (
     <Modal transparent={false} animationType="slide" visible onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: INK }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: insets.top + 18, paddingHorizontal: 22 }}>
-          <Script size={26}>Settings</Script>
-          <Pressable onPress={onClose}>
-            <Text style={{ fontFamily: FONTS.mono, fontSize: T.micro, color: rgba(PAPER, 0.5) }}>DONE</Text>
+      <View style={{ flex: 1, backgroundColor: t.bg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: insets.top + 16, paddingHorizontal: 24 }}>
+          <Display size={26}>Settings</Display>
+          <Pressable onPress={onClose} hitSlop={12}>
+            <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: t.ink }}>Done</Text>
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: insets.bottom + 40, gap: 14 }}>
-          <Panel>
-            <Label>YOUR CIRCLES</Label>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: T.micro, color: rgba(PAPER, 0.48), marginTop: 6 }}>
-              Everyone sees the same battery. Circles only change who you can pulse.
-            </Text>
-            {GROUPS.map((g) => {
-              const list = members.filter((m) => m.g === g.id);
-              return (
-                <View key={g.id} style={{ marginTop: 14 }}>
-                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 8 }}>
-                    <Script size={22} color={rgba(PAPER, 0.85)}>{g.label}</Script>
-                    <Text style={{ fontFamily: FONTS.mono, fontSize: T.micro, color: rgba(PAPER, 0.45) }}>{list.length}/6</Text>
-                  </View>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 8 }}>
-                    {list.map((m) => (
-                      <Pressable key={m.n} onPress={() => setMembers(members.filter((x) => x.n !== m.n))} style={{ flexDirection: "row", alignItems: "center", gap: 7, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 100, backgroundColor: rgba(GOLD, 0.1), borderWidth: 1, borderColor: rgba(GOLD, 0.4) }}>
-                        <Text style={{ fontFamily: FONTS.sansSemiBold, fontSize: T.small, color: PAPER }}>{m.n}</Text>
-                        <Text style={{ fontFamily: FONTS.mono, fontSize: T.small, color: rgba(PAPER, 0.4) }}>×</Text>
-                      </Pressable>
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
+          <Section title="People" note="Everyone sees the same level. Groups just decide who you send pulses to.">
+            <Panel>
+              <PeopleEditor members={members} setMembers={setMembers} suggestions={SUGGESTED} />
+            </Panel>
+          </Section>
+
+          <Section title="Colours">
+            <Panel style={{ padding: 0 }}>
+              {Object.entries(THEMES).map(([id, th], i) => (
+                <Pressable key={id} onPress={() => setTheme(id)} style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderTopWidth: i ? 1 : 0, borderColor: t.line }}>
+                  <View style={{ flexDirection: "row", borderRadius: 5, overflow: "hidden" }}>
+                    {stopsFor(id, t.scheme).map((stop, k) => (
+                      <View key={k} style={{ width: 14, height: 14, backgroundColor: stop }} />
                     ))}
-                    {list.length === 0 && <Text style={{ fontFamily: FONTS.sans, fontSize: T.micro, color: rgba(PAPER, 0.4) }}>Empty</Text>}
                   </View>
-                </View>
-              );
-            })}
-
-            <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderColor: rgba(PAPER, 0.07) }}>
-              <View style={{ flexDirection: "row", gap: 6 }}>
-                {GROUPS.map((g) => {
-                  const on = addTo === g.id;
-                  return (
-                    <Pressable key={g.id} onPress={() => setAddTo(g.id)} style={{ flex: 1, alignItems: "center", paddingVertical: 8, borderRadius: 100, backgroundColor: on ? rgba(GOLD, 0.14) : rgba(PAPER, 0.03), borderWidth: 1, borderColor: on ? rgba(GOLD, 0.5) : rgba(PAPER, 0.07) }}>
-                      <Text style={{ fontFamily: FONTS.sansSemiBold, fontSize: T.micro, color: on ? GOLD : rgba(PAPER, 0.45) }}>{g.label}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 9 }}>
-                <TextInput
-                  value={newName}
-                  onChangeText={setNewName}
-                  onSubmitEditing={add}
-                  placeholder="Partner, friend, family…"
-                  placeholderTextColor={rgba(PAPER, 0.3)}
-                  style={{ flex: 1, paddingVertical: 11, paddingHorizontal: 13, borderRadius: 100, backgroundColor: rgba(PAPER, 0.03), borderWidth: 1, borderColor: rgba(PAPER, 0.08), color: PAPER, fontFamily: FONTS.sans, fontSize: T.body }}
-                />
-                <Pressable onPress={add} style={{ width: 44, borderRadius: 100, backgroundColor: newName.trim() ? GOLD : rgba(PAPER, 0.04), alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 20, color: newName.trim() ? INK : rgba(PAPER, 0.3) }}>+</Text>
+                  <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>{th.label}</Text>
+                  {theme === id && <Icon name="check" size={18} color={t.ink} />}
                 </Pressable>
-              </View>
-            </View>
-          </Panel>
+              ))}
+            </Panel>
+          </Section>
 
-          <Panel>
-            <Label>BATTERY COLOURS</Label>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: T.micro, color: rgba(PAPER, 0.48), marginTop: 6 }}>
-              How your level looks, to you and to your circles.
-            </Text>
+          <Section title="Morning check-in" note={morningTime === "off" ? "No morning prompt." : "One quick question, once a day."}>
+            <Segmented options={TIMES} value={morningTime} onChange={setMorningTime} />
+          </Section>
 
-            <View style={{ gap: 8, marginTop: 14 }}>
-              {Object.entries(THEMES).map(([id, t]) => {
-                const on = theme === id;
+          <Section title="Personality type" note={mbti ? MBTI_NOTE(mbti) : "Optional. It tailors your weekly summary."}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+              {MBTI.map((k) => {
+                const on = mbti === k;
                 return (
-                  <Pressable key={id} onPress={() => setTheme(id)} style={{ padding: 12, borderRadius: 16, backgroundColor: on ? rgba(t.stops[4], 0.1) : rgba(PAPER, 0.03), borderWidth: 1, borderColor: on ? rgba(t.stops[4], 0.55) : rgba(PAPER, 0.07) }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <View style={{ flexDirection: "row", borderRadius: 100, overflow: "hidden", shadowColor: t.stops[4], shadowOpacity: on ? 0.45 : 0, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }}>
-                        {t.stops.map((stopColor, i) => (
-                          <View key={i} style={{ width: 17, height: 17, backgroundColor: stopColor }} />
-                        ))}
-                      </View>
+                  <Pressable key={k} onPress={() => setMbti(on ? null : k)} style={{ width: "23.5%", paddingVertical: 10, borderRadius: 10, alignItems: "center", backgroundColor: on ? t.ink : t.surface, borderWidth: 1, borderColor: on ? t.ink : t.line }}>
+                    <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, letterSpacing: 0.4, color: on ? t.inverse : t.muted }}>{k}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Section>
+
+          <Section title="Songs">
+            <Panel style={{ padding: 0 }}>
+              <Pressable onPress={() => setSpotify(!spotify)} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 16 }}>
+                <Icon name="music" size={18} color={t.muted} />
+                <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>Connect Spotify</Text>
+                <Toggle on={spotify} />
+              </Pressable>
+
+              {spotify && MOODS.map(([k, label]) => {
+                const expanded = openMood === k;
+                return (
+                  <View key={k} style={{ borderTopWidth: 1, borderColor: t.line }}>
+                    <Pressable onPress={() => setOpenMood(expanded ? null : k)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16 }}>
                       <View style={{ flex: 1 }}>
-                        <Script size={21} color={on ? PAPER : rgba(PAPER, 0.7)}>{t.label}</Script>
-                        <Text style={{ fontFamily: FONTS.sans, fontSize: T.micro, color: rgba(PAPER, 0.48), marginTop: 2 }}>{t.note}</Text>
+                        <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>{label}</Text>
+                        <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.faint, marginTop: 2 }}>{songs[k] || "Choose a song"}</Text>
                       </View>
-                      {on && <Text style={{ fontFamily: FONTS.mono, fontSize: T.small, color: t.stops[4] }}>✓</Text>}
-                    </View>
-                  </Pressable>
+                      <View style={{ transform: [{ rotate: expanded ? "90deg" : "0deg" }] }}>
+                        <Icon name="chevron" size={16} color={t.faint} />
+                      </View>
+                    </Pressable>
+                    {expanded && LIBRARY[k].map((tr) => {
+                      const val = `${tr.t} — ${tr.a}`;
+                      const on = songs[k] === val;
+                      return (
+                        <Pressable key={tr.t} onPress={() => setSongs({ ...songs, [k]: on ? "" : val })} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, paddingLeft: 32, paddingRight: 16 }}>
+                          <View style={{ flex: 1 }}>
+                            <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.ink }}>{tr.t}</Text>
+                            <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint }}>{tr.a}</Text>
+                          </View>
+                          {on && <Icon name="check" size={16} color={t.ink} />}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
                 );
               })}
-            </View>
+            </Panel>
+          </Section>
 
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderColor: rgba(PAPER, 0.07) }}>
-              <Label color={rgba(PAPER, 0.3)}>YOU RIGHT NOW</Label>
-              <View style={{ flex: 1, height: 4, borderRadius: 4, backgroundColor: rgba(PAPER, 0.06), overflow: "hidden" }}>
-                <View style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${level}%`, backgroundColor: colorFor(level), shadowColor: colorFor(level), shadowOpacity: 0.8, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }} />
-              </View>
-              <Text style={{ fontFamily: FONTS.sansExtraBold, fontSize: 16, color: colorFor(level) }}>{level}</Text>
-            </View>
-          </Panel>
-
-          <Panel>
-            <Label>MORNING CHECK-IN</Label>
-            <Script size={26} style={{ marginTop: 8 }}>{`Ask me at ${morningTime}`}</Script>
-            <View style={{ flexDirection: "row", gap: 7, marginTop: 12 }}>
-              {["07:00", "07:40", "08:30", "off"].map((t) => {
-                const on = morningTime === t;
-                return (
-                  <Pressable key={t} onPress={() => setMorningTime(t)} style={{ flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 100, backgroundColor: on ? rgba(GOLD, 0.16) : rgba(PAPER, 0.03), borderWidth: 1, borderColor: on ? rgba(GOLD, 0.6) : rgba(PAPER, 0.08) }}>
-                    <Text style={{ fontFamily: FONTS.mono, fontSize: T.micro, color: on ? GOLD : rgba(PAPER, 0.45) }}>{t.toUpperCase()}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text style={{ fontFamily: FONTS.sans, fontSize: T.micro, color: rgba(PAPER, 0.48), marginTop: 10 }}>One quiet prompt. Never twice in a day.</Text>
-          </Panel>
-
-          <Panel>
-            <Label>YOUR TYPE</Label>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
-              {MBTI.map((t) => {
-                const on = mbti === t;
-                return (
-                  <Pressable key={t} onPress={() => setMbti(on ? null : t)} style={{ width: "22.5%", paddingVertical: 9, borderRadius: 10, alignItems: "center", backgroundColor: on ? rgba(AQUA, 0.15) : rgba(PAPER, 0.03), borderWidth: 1, borderColor: on ? rgba(AQUA, 0.6) : rgba(PAPER, 0.06) }}>
-                    <Text style={{ fontFamily: FONTS.mono, fontSize: T.micro, color: on ? AQUA : rgba(PAPER, 0.4) }}>{t}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </Panel>
-
-          <Panel>
-            <Label>YOUR SOUNDTRACK</Label>
-            {["low", "mid", "high"].map((k, i) => {
-              const dot = [RAMP[0], RAMP[2], RAMP[4]][i];
-              return (
-                <View key={k} style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dot, shadowColor: dot, shadowOpacity: 1, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }} />
-                  <Text numberOfLines={1} style={{ flex: 1, fontFamily: FONTS.sans, fontSize: T.small, color: songs[k] ? PAPER : rgba(PAPER, 0.3) }}>
-                    {songs[k] || "Not set"}
-                  </Text>
-                </View>
-              );
-            })}
-          </Panel>
-
-          <Text style={{ fontFamily: FONTS.mono, fontSize: T.micro, color: rgba(PAPER, 0.38), textAlign: "center", lineHeight: T.micro * 1.8, marginTop: 4 }}>
-            Nothing is tracked in the background.{"\n"}Only your circles see your level.
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 32 }}>
+            Only your people see your level. Nothing runs in the background.
           </Text>
         </ScrollView>
       </View>

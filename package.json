@@ -11,14 +11,14 @@
     "deploy": "bash scripts/deploy-pages.sh"
   },
   "dependencies": {
-    "@expo-google-fonts/caveat": "^0.4.2",
-    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
-    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
+    "@expo-google-fonts/instrument-serif": "^0.4.1",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.17",
     "expo": "^54.0.0",
     "expo-font": "~14.0.12",
+    "expo-haptics": "~15.0.8",
     "expo-linear-gradient": "~15.0.8",
     "expo-notifications": "~0.32.17",
     "expo-status-bar": "~3.0.9",

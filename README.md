@@ -5,12 +5,14 @@ A social battery app. Set your level, your circle sees it, nobody has to ask if 
 ## Setup
 
 ```bash
-cd ~/Desktop/pulse
+cd ~/Desktop/pulse/pulse
 npm install
 npx expo start
 ```
 
-Scan the QR code with **Expo Go** on your phone. First install pulls a lot of packages, so give it a few minutes.
+Scan the QR code with **Expo Go** on your phone, or press `w` for the browser. First install pulls a lot of packages, so give it a few minutes.
+
+The app follows the phone's light/dark setting, so check changes in both.
 
 ## Hooking up to GitHub
 
@@ -28,33 +30,35 @@ git push -u origin main
 ## Structure
 
 ```
-theme.js                    Design tokens. Single source of truth for colour and type.
-lib/battery.js              All pure logic: status thresholds, MBTI personalisation,
-                            circle helpers, weekly insights. No UI, easy to test.
+theme.js                    Design tokens: light/dark palettes (useTheme), fonts, type
+                            scale. Ink on warm paper; the battery fluid is the only colour.
+lib/data.js                 Mock data, level colour ramps (THEMES), status copy.
+lib/haptics.js              Haptic tick/tap, no-ops on web.
 components/
-  BatteryGauge.js           The signature interaction. Drag to set, blue flame on the
-                            fill edge while dragging.
-  MiniBattery.js            Small read-only battery for circle rows.
-  VibeCheck.js              Two-question tap-only flow for "I don't know my level".
+  primitives.js             Btn, Label, Panel, Chip, Display (serif), Segmented, Toggle.
+  LiquidCell.js             The battery. Drag to set; waves, bubbles, haptic ticks.
+  PulseBurst.js             Full-screen colour wash + haptics when a pulse is sent.
+  Orb.js                    Person on the Circle ring, with a level arc.
+  PeopleEditor.js           Add/remove people and pick their group.
+  Sheet.js                  Bottom sheet used by MorningPrompt and VibeCheckModal.
+  Icon.js                   Small stroke icon set (react-native-svg).
 screens/
-  OnboardingScreen.js       8 steps: welcome, how it works, circle, vibes, soundtrack,
-                            MBTI, first level, done.
-  MyBatteryScreen.js        Gauge, presets, 7-day history, reason chips, "could use a
-                            chat", companionship card, suggestions, "I'm around", pulse.
-  CircleScreen.js           Ambient room summary, energy-sorted list, acknowledgments,
-                            join open invites.
-  InsightsScreen.js         Weekly ring with flame glow, plain-language metrics.
-App.js                      Fonts, navigation, onboarding gate.
+  OnboardingScreen.js       3 steps: welcome, set your level, add your people.
+  YouScreen.js              Battery, status, reasons / "I'm around", send pulse.
+  CircleScreen.js           Ring of people per group (Home, Family, Friends).
+  WeekScreen.js             Weekly bars and a few plain facts.
+  SettingsScreen.js         People, colours, morning check-in, personality type, songs.
+App.js                      Fonts, navigation, onboarding gate, app state.
 ```
 
 ## What's mocked
 
 Everything is local state. There is no backend yet.
 
-- `CIRCLE` and `PAST_HISTORY` in `lib/battery.js` are hardcoded. Replace with Firestore reads.
+- `PEOPLE` and `WEEK` in `lib/data.js` are hardcoded. Replace with Firestore reads.
 - `sendPulse` sets local state. Replace with a Firestore write.
-- Spotify integration is not built. The soundtrack step in onboarding collects the data but nothing consumes it yet.
-- The weekly "pattern spotted" text is static copy, not computed.
+- Spotify integration is not built. Settings collects a song per mood but nothing consumes it yet.
+- The Week headline and personality-type copy are static, not computed.
 
 ## Next up
 
@@ -66,5 +70,6 @@ Everything is local state. There is no backend yet.
 ## Gotchas
 
 - `react-native-reanimated/plugin` must be **last** in the babel plugins array. It's already set in `babel.config.js`. If gestures silently stop working, check this first.
+- Import fonts per weight (`@expo-google-fonts/inter/500Medium`), not from the package index, or the web export ships every weight.
 - `GestureHandlerRootView` must wrap the app. Already done in `App.js`.
 - If you change `babel.config.js`, restart with `npx expo start -c` to clear the cache.

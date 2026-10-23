@@ -4,10 +4,10 @@
     "slug": "pulse",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#0A0716"
+      "backgroundColor": "#F6F4EF"
     },
     "ios": {
       "supportsTablet": false,
@@ -16,7 +16,7 @@
     "android": {
       "package": "com.pulse.app",
       "adaptiveIcon": {
-        "backgroundColor": "#0A0716"
+        "backgroundColor": "#F6F4EF"
       }
     },
     "plugins": [

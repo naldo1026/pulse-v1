@@ -1,33 +1,67 @@
 // Design tokens. Single source of truth.
-// Dusk to dawn. Low is night and candlelight, not alarm. Full is sunrise.
-// Nothing in this ramp reads as an error state.
+// Warm paper and ink. The battery fluid is the only real colour on screen;
+// everything else is ink at three strengths.
 
-export const INK = "#0A0716";
-export const PANEL = "#140F26";
-
-export const VIOLET = "#8B5CF6"; // low  — restful night
-export const ROSE = "#FF5D8F"; // mid  — warm dusk
-export const GOLD = "#FFC145"; // high — daylight
-export const AQUA = "#4CC9F0"; // cool accent, used for type/insight only
-export const PAPER = "#FBF7F0";
-export const SPOT = "#1DB954"; // spotify brand green
-
-// Small-text scale. Three sizes only, so everything lines up.
-// micro 11 · small 12.5 · body 14. Nothing below 11 anywhere.
-export const T = { micro: 11, small: 12.5, body: 14 };
-
-export const FONTS = {
-  script: "Caveat_700Bold",
-  sans: "PlusJakartaSans_400Regular",
-  sansMedium: "PlusJakartaSans_500Medium",
-  sansSemiBold: "PlusJakartaSans_600SemiBold",
-  sansBold: "PlusJakartaSans_700Bold",
-  sansExtraBold: "PlusJakartaSans_800ExtraBold",
-  mono: "IBMPlexMono_400Regular",
-  monoMedium: "IBMPlexMono_500Medium",
-};
+import { useColorScheme } from "react-native";
 
 export const rgba = (hex, a) => {
   const h = hex.replace("#", "");
   return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a})`;
 };
+
+const LIGHT_INK = "#1A1A18";
+const DARK_INK = "#EDEBE6";
+
+export const LIGHT = {
+  scheme: "light",
+  bg: "#F6F4EF",
+  surface: "#FFFFFF",
+  raised: "#FFFFFF",
+  sunk: "#EDEAE3",
+  line: rgba(LIGHT_INK, 0.09),
+  lineStrong: rgba(LIGHT_INK, 0.16),
+  ink: LIGHT_INK,
+  muted: rgba(LIGHT_INK, 0.56),
+  faint: rgba(LIGHT_INK, 0.34),
+  inverse: "#F6F4EF",
+  scrim: rgba(LIGHT_INK, 0.28),
+};
+
+export const DARK = {
+  scheme: "dark",
+  bg: "#131312",
+  surface: "#1C1C1A",
+  raised: "#31312E",
+  sunk: "#242422",
+  line: rgba(DARK_INK, 0.09),
+  lineStrong: rgba(DARK_INK, 0.18),
+  ink: DARK_INK,
+  muted: rgba(DARK_INK, 0.58),
+  faint: rgba(DARK_INK, 0.36),
+  inverse: "#131312",
+  scrim: "rgba(0,0,0,0.55)",
+};
+
+export function useTheme() {
+  return useColorScheme() === "dark" ? DARK : LIGHT;
+}
+
+// Readable text colour to sit on top of a fill colour.
+export const onColor = (hex) => {
+  const h = hex.replace("#", "");
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.48 ? rgba(LIGHT_INK, 0.78) : "rgba(255,255,255,0.92)";
+};
+
+// Inter for everything you read, Instrument Serif for the few words that
+// carry the mood (status, screen titles).
+export const FONTS = {
+  display: "InstrumentSerif_400Regular",
+  displayItalic: "InstrumentSerif_400Regular_Italic",
+  sans: "Inter_400Regular",
+  medium: "Inter_500Medium",
+  semibold: "Inter_600SemiBold",
+};
+
+// caption 12 · small 13 · body 15 · title 17. Display sizes live on <Display>.
+export const T = { caption: 12, small: 13, body: 15, title: 17 };
