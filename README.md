@@ -53,6 +53,10 @@ screens/
   WeekScreen.js             Weekly bars and a few plain facts.
   SettingsScreen.js         People, colours, morning check-in, personality type, songs.
 App.js                      Fonts, navigation, onboarding gate, app state.
+assets/icon.svg             App icon source (battery + streak). The PNGs in assets/ and
+                            public/ are rendered from it; re-export them if it changes.
+public/                     Web page template (icon links, manifest) and the icon PNGs.
+                            Expo copies it into dist/ on export.
 ```
 
 ## What's mocked

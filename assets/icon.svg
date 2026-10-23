@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="1024" height="1024">
+  <!-- Pulse app icon (option C: battery + streak). Source for the PNGs in
+       assets/ and public/. Square and full-bleed: each platform applies its
+       own corner mask. -->
+  <defs>
+    <radialGradient id="peach" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#E0AE8C" stop-opacity="0.95"/>
+      <stop offset="0.55" stop-color="#E0AE8C" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#E0AE8C" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="lavender" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#9A8FC7" stop-opacity="0.8"/>
+      <stop offset="0.55" stop-color="#9A8FC7" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#9A8FC7" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="tile"><rect width="100" height="100"/></clipPath>
+  </defs>
+
+  <rect width="100" height="100" fill="#FBFBFA"/>
+
+  <!-- light streaks, same as the app's background -->
+  <g clip-path="url(#tile)">
+    <ellipse cx="50" cy="24" rx="80" ry="18" fill="url(#peach)" transform="rotate(-24 50 24)"/>
+    <ellipse cx="30" cy="61" rx="75" ry="13" fill="url(#lavender)" transform="rotate(-24 30 61)"/>
+  </g>
+
+  <!-- battery -->
+  <rect x="33" y="25" width="34" height="57" rx="10" fill="#FFFFFF" stroke="#141413" stroke-width="4.5"/>
+  <rect x="43" y="16.5" width="14" height="6" rx="2.5" fill="#141413"/>
+  <path d="M39.5 49 Q44.75 53 50 49 T60.5 49 V70 Q60.5 75.5 55 75.5 H45 Q39.5 75.5 39.5 70 Z" fill="#E0AE8C" opacity="0.45"/>
+  <path d="M39.5 51 Q44.75 47 50 51 T60.5 51 V70 Q60.5 75.5 55 75.5 H45 Q39.5 75.5 39.5 70 Z" fill="#E0AE8C"/>
+</svg>
