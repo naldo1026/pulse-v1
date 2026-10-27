@@ -23,9 +23,6 @@
     "plugins": [
       "expo-notifications",
       "expo-font"
-    ],
-    "experiments": {
-      "baseUrl": "/pulse-v1"
-    }
+    ]
   }
 }

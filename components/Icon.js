@@ -16,6 +16,8 @@ const SHAPES = {
   plus: <Path d="M12 5v14M5 12h14" />,
   chevron: <Path d="M9 6l6 6-6 6" />,
   back: <Path d="M15 6l-6 6 6 6" />,
+  // the iOS share glyph, for the install steps
+  share: <Path d="M12 3v12M8 7l4-4 4 4M7 11H6a1 1 0 00-1 1v8a1 1 0 001 1h12a1 1 0 001-1v-8a1 1 0 00-1-1h-1" />,
   music: (
     <>
       <Path d="M9 17.5V6l10-2v11.5" />

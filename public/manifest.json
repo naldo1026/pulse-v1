@@ -1,8 +1,11 @@
 {
+  "id": "/",
   "name": "Pulse",
   "short_name": "Pulse",
-  "start_url": ".",
-  "scope": ".",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#FBFBFA",
   "theme_color": "#FBFBFA",
   "icons": [

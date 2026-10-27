@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useSharedValue, useAnimatedStyle } from "react-native-reanimated";
@@ -17,10 +17,11 @@ const listNames = (names) => (names.length === 1 ? names[0] : `${names.slice(0, 
 export default function YouScreen({
   level, setLevel, reason, setReason, sent, sendPulse, matches,
   openQuiz, wantsChat, setWantsChat, myWindow, setMyWindow,
-  seenBy, openSettings, members, pulseTo, setPulseTo,
+  seenBy, openSettings, members, pulseTo, setPulseTo, sendError, nudge,
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const [asked, setAsked] = useState({});
   const s = statusFor(level);
   const canSend = pulseTo.some((g) => members.some((m) => m.g === g));
 
@@ -101,6 +102,12 @@ export default function YouScreen({
           </Btn>
         </Animated.View>
 
+        {sendError && (
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.muted, textAlign: "center", marginTop: 14 }}>
+            That didn't send. Check your connection and try again.
+          </Text>
+        )}
+
         {seenBy.length > 0 && (
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 14 }}>
             <View style={{ flexDirection: "row" }}>
@@ -119,12 +126,16 @@ export default function YouScreen({
             <Label>Also up for something</Label>
             <View style={{ marginTop: 4 }}>
               {matches.map((m) => (
-                <View key={m.n} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: t.line }}>
+                <View key={m.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, borderBottomWidth: 1, borderColor: t.line }}>
                   <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>
                     {m.phrase} with <Text style={{ fontFamily: FONTS.medium }}>{m.n}</Text>
                   </Text>
-                  <Pressable style={{ paddingVertical: 6, paddingHorizontal: 14, borderRadius: 100, borderWidth: 1, borderColor: t.lineStrong }}>
-                    <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.ink }}>Ask</Text>
+                  <Pressable
+                    disabled={asked[m.id]}
+                    onPress={() => { setAsked((a) => ({ ...a, [m.id]: true })); nudge(m.id, "ask"); }}
+                    style={{ paddingVertical: 6, paddingHorizontal: 14, borderRadius: 100, borderWidth: 1, borderColor: t.lineStrong }}
+                  >
+                    <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: asked[m.id] ? t.faint : t.ink }}>{asked[m.id] ? "Asked" : "Ask"}</Text>
                   </Pressable>
                 </View>
               ))}

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
 import { useTheme, FONTS, T } from "../theme";
-import { SUGGESTED, statusFor } from "../lib/data";
+import { statusFor } from "../lib/data";
 import { Btn, Display } from "../components/primitives";
 import LiquidCell from "../components/LiquidCell";
 import VibeCheckModal from "../components/VibeCheckModal";
@@ -21,7 +21,7 @@ function FadeStep({ step, children }) {
   return <Animated.View style={[{ flex: 1 }, style]}>{children}</Animated.View>;
 }
 
-function TopBar({ step, onBack }) {
+function TopBar({ step, steps, onBack }) {
   const t = useTheme();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 16, height: 44 }}>
@@ -29,7 +29,7 @@ function TopBar({ step, onBack }) {
         <Icon name="back" color={t.muted} />
       </Pressable>
       <View style={{ flex: 1, flexDirection: "row", gap: 6 }}>
-        {[1, 2].map((k) => (
+        {steps.map((k) => (
           <View key={k} style={{ flex: 1, height: 2, borderRadius: 1, backgroundColor: k <= step ? t.ink : t.line }} />
         ))}
       </View>
@@ -38,18 +38,21 @@ function TopBar({ step, onBack }) {
   );
 }
 
-export default function OnboardingScreen({ onFinish }) {
+// Welcome, name, level, groups, then notifications (skipped where push
+// isn't possible or is already on). Groups save as you set them; the rest
+// is handed to onFinish.
+export default function OnboardingScreen({ initialName, people, setGroup, pushPerm, enablePush, onFinish }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
+  const [name, setName] = useState(initialName || "");
   const [level, setLevel] = useState(50);
   const [quiz, setQuiz] = useState(false);
-  const [members, setMembers] = useState([
-    { n: "Ronaldo", g: "household" }, { n: "Kyle", g: "household" }, { n: "Erin", g: "friends" },
-  ]);
+  const [askPush] = useState(pushPerm === "default");
 
   const st = statusFor(level);
-  const finish = () => onFinish({ level, members });
+  const steps = askPush ? [1, 2, 3, 4] : [1, 2, 3];
+  const finish = () => onFinish({ name: name.trim(), level });
 
   const pad = { paddingTop: insets.top + 8, paddingHorizontal: 24, paddingBottom: insets.bottom + 20 };
 
@@ -74,7 +77,22 @@ export default function OnboardingScreen({ onFinish }) {
 
         {step === 1 && (
           <View style={[{ flex: 1 }, pad]}>
-            <TopBar step={1} onBack={() => setStep(0)} />
+            <TopBar step={1} steps={steps} onBack={() => setStep(0)} />
+            <Display size={32} style={{ marginTop: 24 }}>What should people call you?</Display>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 8 }}>This is how you show up in everyone's circle.</Text>
+            <TextInput
+              value={name} onChangeText={setName} onSubmitEditing={() => name.trim() && setStep(2)}
+              placeholder="Your name" placeholderTextColor={t.faint} autoFocus autoComplete="given-name" maxLength={24}
+              style={{ marginTop: 28, paddingVertical: 15, paddingHorizontal: 20, borderRadius: 100, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, color: t.ink, fontFamily: FONTS.sans, fontSize: 16 }}
+            />
+            <View style={{ flex: 1 }} />
+            <Btn onPress={() => setStep(2)} disabled={!name.trim()}>Continue</Btn>
+          </View>
+        )}
+
+        {step === 2 && (
+          <View style={[{ flex: 1 }, pad]}>
+            <TopBar step={2} steps={steps} onBack={() => setStep(1)} />
             <Display size={32} style={{ marginTop: 24 }}>How are you feeling right now?</Display>
             <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 8 }}>Drag to set it. You can change it any time.</Text>
 
@@ -84,24 +102,40 @@ export default function OnboardingScreen({ onFinish }) {
               <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 2 }}>{st.s}</Text>
             </View>
 
-            <Btn onPress={() => setStep(2)}>Continue</Btn>
+            <Btn onPress={() => setStep(3)}>Continue</Btn>
             <Btn variant="ghost" onPress={() => setQuiz(true)} style={{ marginTop: 4 }}>Not sure? Answer two questions</Btn>
           </View>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <View style={[{ flex: 1 }, pad]}>
-            <TopBar step={2} onBack={() => setStep(1)} />
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-              <Display size={32} style={{ marginTop: 24 }}>Who should see it?</Display>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 8 }}>Add a few people. You can change this later.</Text>
+            <TopBar step={3} steps={steps} onBack={() => setStep(2)} />
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
+              <Display size={32} style={{ marginTop: 24 }}>Sort your people</Display>
+              <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, lineHeight: 22, color: t.muted, marginTop: 8 }}>
+                Everyone here can see your level. Groups decide whose phones buzz when you send a pulse.
+              </Text>
 
-              <View style={{ marginTop: 24 }}>
-                <PeopleEditor members={members} setMembers={setMembers} suggestions={SUGGESTED} />
+              <View style={{ marginTop: 16 }}>
+                <PeopleEditor people={people} setGroup={setGroup} />
               </View>
             </ScrollView>
 
-            <Btn onPress={finish}>{members.length ? "Done" : "Skip for now"}</Btn>
+            <Btn onPress={askPush ? () => setStep(4) : finish}>{askPush ? "Continue" : "Done"}</Btn>
+          </View>
+        )}
+
+        {step === 4 && (
+          <View style={[{ flex: 1 }, pad]}>
+            <TopBar step={4} steps={steps} onBack={() => setStep(3)} />
+            <Display size={32} style={{ marginTop: 24 }}>Know when someone sends a pulse</Display>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, lineHeight: 22, color: t.muted, marginTop: 8 }}>
+              Pulses from your people, and one quick check-in each morning. Nothing else.
+            </Text>
+            <View style={{ flex: 1 }} />
+            {/* enablePush has to run straight from the tap for iOS to show its prompt. */}
+            <Btn onPress={() => enablePush().finally(finish)}>Turn on notifications</Btn>
+            <Btn variant="ghost" onPress={finish} style={{ marginTop: 4 }}>Not now</Btn>
           </View>
         )}
       </FadeStep>

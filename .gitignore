@@ -8,3 +8,7 @@ web-build/
 .env.local
 ios/
 android/
+supabase/.temp/
+supabase/.branches/
+supabase/functions/.env
+supabase/vault.local.sql

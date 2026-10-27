@@ -1,0 +1,10 @@
+# Supabase CLI config. Only what Pulse needs; the CLI fills in the rest.
+project_id = "pulse"
+
+# Both functions are called by the database with a shared secret header
+# (x-pulse-secret), not a user JWT.
+[functions.notify]
+verify_jwt = false
+
+[functions.morning]
+verify_jwt = false
