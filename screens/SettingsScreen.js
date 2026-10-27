@@ -1,14 +1,21 @@
 import React, { useState } from "react";
-import { View, Text, Modal, ScrollView, Pressable } from "react-native";
+import { View, Text, Modal, ScrollView, Pressable, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, FONTS, T } from "../theme";
-import { MBTI, MBTI_NOTE, THEMES, LIBRARY, SUGGESTED, stopsFor } from "../lib/data";
-import { Label, Panel, Display, Segmented, Toggle } from "../components/primitives";
+import { MBTI, MBTI_NOTE, THEMES, LIBRARY, stopsFor } from "../lib/data";
+import { Btn, Label, Panel, Display, Segmented, Toggle } from "../components/primitives";
 import PeopleEditor from "../components/PeopleEditor";
 import Icon from "../components/Icon";
 
 const TIMES = [["07:00", "7:00"], ["07:40", "7:40"], ["08:30", "8:30"], ["off", "Off"]];
 const MOODS = [["low", "When you're low"], ["mid", "In between"], ["high", "When you're full"]];
+
+const PUSH_NOTE = {
+  granted: "Pulses from your people, plus the morning check-in.",
+  denied: "Blocked on this phone. Turn them on in Settings, Notifications, Pulse.",
+  unsupported: "This browser can't do notifications. On iPhone, open Pulse from your home screen.",
+  default: "Pulses from your people, plus the morning check-in.",
+};
 
 function Section({ title, children, note }) {
   const t = useTheme();
@@ -22,12 +29,28 @@ function Section({ title, children, note }) {
 }
 
 export default function SettingsScreen({
-  onClose, members, setMembers, mbti, setMbti, songs, setSongs, spotify, setSpotify,
-  morningTime, setMorningTime, theme, setTheme,
+  onClose, name, setName, people, setGroup, mbti, setMbti, songs, setSongs, spotify, setSpotify,
+  morningTime, setMorningTime, theme, setTheme, pushPerm, enablePush, changePassword, signOut,
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [openMood, setOpenMood] = useState(null);
+  const [draft, setDraft] = useState(name);
+  const saveName = () => {
+    if (draft.trim() && draft.trim() !== name) setName(draft.trim());
+    else setDraft(name);
+  };
+  const [pw, setPw] = useState("");
+  const [pwNote, setPwNote] = useState(null);
+  const savePassword = async () => {
+    if (!pw) return;
+    const err = await changePassword(pw);
+    setPwNote(err || "Saved. Use it next time you sign in.");
+    if (!err) setPw("");
+  };
+
+  // 16px text: iOS zooms the page into any input smaller than that.
+  const field = { paddingVertical: 14, paddingHorizontal: 18, borderRadius: 100, backgroundColor: t.surface, borderWidth: 1, borderColor: t.line, color: t.ink, fontFamily: FONTS.sans, fontSize: 16 };
 
   return (
     <Modal transparent={false} animationType="slide" visible onRequestClose={onClose}>
@@ -40,10 +63,41 @@ export default function SettingsScreen({
         </View>
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
-          <Section title="People" note="Everyone sees the same level. Groups just decide who you send pulses to.">
-            <Panel>
-              <PeopleEditor members={members} setMembers={setMembers} suggestions={SUGGESTED} />
+          <Section title="Your name">
+            <TextInput
+              value={draft} onChangeText={setDraft} onBlur={saveName} onSubmitEditing={saveName}
+              maxLength={24} autoComplete="given-name" placeholderTextColor={t.faint}
+              style={field}
+            />
+          </Section>
+
+          <Section title="Password" note={pwNote || "Swap the one you were given for your own."}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TextInput
+                value={pw} onChangeText={(v) => { setPw(v); setPwNote(null); }} onSubmitEditing={savePassword}
+                placeholder="New password" placeholderTextColor={t.faint}
+                secureTextEntry autoCapitalize="none" autoCorrect={false} autoComplete="new-password" textContentType="newPassword"
+                style={[field, { flex: 1 }]}
+              />
+              <Btn variant="secondary" onPress={savePassword} disabled={!pw} style={{ paddingVertical: 14 }}>Save</Btn>
+            </View>
+          </Section>
+
+          <Section title="People" note="Everyone on Pulse sees your level. Groups decide whose phones buzz when you send a pulse.">
+            <Panel style={{ paddingVertical: 6 }}>
+              <PeopleEditor people={people} setGroup={setGroup} />
             </Panel>
+          </Section>
+
+          <Section title="Notifications" note={PUSH_NOTE[pushPerm]}>
+            {pushPerm === "default" ? (
+              <Btn variant="secondary" onPress={enablePush}>Turn on notifications</Btn>
+            ) : (
+              <Panel style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16 }}>
+                <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>{pushPerm === "granted" ? "On" : "Off"}</Text>
+                {pushPerm === "granted" && <Icon name="check" size={18} color={t.ink} />}
+              </Panel>
+            )}
           </Section>
 
           <Section title="Colours">
@@ -119,8 +173,10 @@ export default function SettingsScreen({
             </Panel>
           </Section>
 
-          <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 32 }}>
-            Only your people see your level. Nothing runs in the background.
+          <Btn variant="ghost" onPress={signOut} style={{ marginTop: 28 }}>Sign out</Btn>
+
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 12 }}>
+            Only people on Pulse see your level.
           </Text>
         </ScrollView>
       </View>
