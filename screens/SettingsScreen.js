@@ -17,6 +17,18 @@ const PUSH_NOTE = {
   default: "Pulses from your people, plus the morning check-in.",
 };
 
+const PHONE_NOTE = "Optional. Lets people message you on WhatsApp when you're open to a chat or around.";
+
+// What someone typed -> digits with the country code first, "" to clear,
+// or null if it can't be a full international number.
+function phoneDigits(v) {
+  let d = v.replace(/\D/g, "");
+  if (!d) return "";
+  if (d.startsWith("00")) d = d.slice(2);
+  else if (d.startsWith("0")) return null;
+  return d.length >= 8 && d.length <= 15 ? d : null;
+}
+
 function Section({ title, children, note }) {
   const t = useTheme();
   return (
@@ -29,7 +41,7 @@ function Section({ title, children, note }) {
 }
 
 export default function SettingsScreen({
-  onClose, name, setName, people, setGroup, mbti, setMbti, songs, setSongs, spotify, setSpotify,
+  onClose, name, setName, phone, setPhone, people, setGroup, mbti, setMbti, songs, setSongs, spotify, setSpotify,
   morningTime, setMorningTime, theme, setTheme, pushPerm, enablePush, changePassword, signOut,
 }) {
   const t = useTheme();
@@ -39,6 +51,16 @@ export default function SettingsScreen({
   const saveName = () => {
     if (draft.trim() && draft.trim() !== name) setName(draft.trim());
     else setDraft(name);
+  };
+  const [phoneDraft, setPhoneDraft] = useState(phone ? `+${phone}` : "");
+  const [phoneNote, setPhoneNote] = useState(null);
+  const savePhone = () => {
+    const d = phoneDigits(phoneDraft);
+    if (d === null) return setPhoneNote("Start with your country code, like +44 7700 900123.");
+    setPhoneDraft(d ? `+${d}` : "");
+    if (d === phone) return;
+    setPhone(d);
+    setPhoneNote(d ? "Saved." : null);
   };
   const [pw, setPw] = useState("");
   const [pwNote, setPwNote] = useState(null);
@@ -67,6 +89,15 @@ export default function SettingsScreen({
             <TextInput
               value={draft} onChangeText={setDraft} onBlur={saveName} onSubmitEditing={saveName}
               maxLength={24} autoComplete="given-name" placeholderTextColor={t.faint}
+              style={field}
+            />
+          </Section>
+
+          <Section title="WhatsApp number" note={phoneNote || PHONE_NOTE}>
+            <TextInput
+              value={phoneDraft} onChangeText={(v) => { setPhoneDraft(v); setPhoneNote(null); }} onBlur={savePhone} onSubmitEditing={savePhone}
+              placeholder="+44 7700 900123" placeholderTextColor={t.faint}
+              keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" maxLength={22}
               style={field}
             />
           </Section>

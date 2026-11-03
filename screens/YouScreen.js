@@ -17,13 +17,15 @@ const listNames = (names) => (names.length === 1 ? names[0] : `${names.slice(0, 
 export default function YouScreen({
   level, setLevel, reason, setReason, sent, sendPulse, matches,
   openQuiz, wantsChat, setWantsChat, myWindow, setMyWindow,
-  seenBy, openSettings, members, pulseTo, setPulseTo, sendError, nudge,
+  seenBy, openSettings, members, pulseTo, setPulseTo, sendError, nextSendAt, nudge,
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [asked, setAsked] = useState({});
   const s = statusFor(level);
   const canSend = pulseTo.some((g) => members.some((m) => m.g === g));
+  // One pulse an hour. "Sent" gets its moment before this takes over.
+  const waiting = !sent && nextSendAt > new Date();
 
   const pulse = useSharedValue(1);
   useEffect(() => {
@@ -97,8 +99,12 @@ export default function YouScreen({
         </View>
 
         <Animated.View style={[pulseStyle, { marginTop: 16 }]}>
-          <Btn onPress={sendPulse} variant={sent ? "secondary" : "primary"} disabled={!canSend}>
-            {sent ? "Sent" : canSend ? "Send pulse" : "Choose who to send to"}
+          <Btn onPress={sent ? undefined : sendPulse} variant={sent ? "secondary" : "primary"} disabled={!canSend || waiting}>
+            {sent
+              ? "Sent"
+              : waiting
+                ? `Send again at ${nextSendAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+                : canSend ? "Send pulse" : "Choose who to send to"}
           </Btn>
         </Animated.View>
 

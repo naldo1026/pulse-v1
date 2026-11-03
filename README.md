@@ -29,7 +29,8 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
 
 - **Data:** the app reads and writes Supabase directly. Everyone signed in can see everyone's level. You can only change your own rows.
 - **Live updates:** Supabase Realtime tells the app when anyone's level, pulse or seen mark changes, and the app refetches. It also refetches when it comes back to the front, because iOS drops the connection in the background.
-- **Pulses:** sending one inserts a row in `pulses`. A trigger works out the recipients from your groups (anyone you haven't sorted counts as Friends) and calls `notify`, which pushes to their phones.
+- **Pulses:** sending one inserts a row in `pulses`. A trigger works out the recipients from your groups (anyone you haven't sorted counts as Friends) and calls `notify`, which pushes to their phones. Another trigger allows one pulse an hour per person, and the app shows when you can send again.
+- **WhatsApp:** people can add a number in Settings. The Circle shows a "Message on WhatsApp" button with a drafted message when someone's low with "Open to a chat" on, or has an "I'm around" window. Without a number, WhatsApp asks who to send it to.
 - **Morning check-in:** cron calls `morning` every 5 minutes. It pushes "Morning. How are you feeling?" to anyone whose check-in time just passed, once a day. Tapping it opens the app on the morning prompt.
 - **Sign-in:** email and password. There's no sign-up in the app. You add people in the Supabase dashboard with a starting password, and they can change it in Settings.
 
@@ -138,7 +139,7 @@ screens/
   SignInScreen.js           Email and password.
   OnboardingScreen.js       Welcome, name, level, sort your people, notifications.
   YouScreen.js              Battery, status, reasons / "I'm around", send pulse.
-  CircleScreen.js           Ring of people per group (Home, Family, Friends).
+  CircleScreen.js           Ring of people per group (Home, Family, Friends); a list past 5.
   WeekScreen.js             Last 7 days of your levels and a few plain facts.
   SettingsScreen.js         Name, password, people, notifications, colours, morning
                             check-in, personality type, songs, sign out.
