@@ -109,6 +109,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [morningTime, setMorningTime] = useState("07:40");
   const [theme, setTheme] = useState("dusk");
+  const [phone, setPhone] = useState("");
   // Apply immediately so this render already uses the right ramp, including
   // when the phone flips between light and dark.
   setRamp(theme, t.scheme);
@@ -141,6 +142,7 @@ export default function App() {
       setSpotify(s.spotify);
       setMorningTime(s.morning_time);
       setTheme(s.theme);
+      setPhone(p.phone || "");
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz && tz !== s.timezone) api.saveSettings(uid, { timezone: tz }).catch(() => {});
       setMe(p);
@@ -207,6 +209,7 @@ export default function App() {
   const changeWantsChat = (v) => { setWantsChat(v); persist({ wants_chat: v }); };
   const changeWindow = (w) => { setMyWindow(w); persist({ around: w, around_until: w ? api.untilFor(w) : null }); };
   const changeName = (n) => { setMe((m) => ({ ...m, display_name: n })); persist({ display_name: n }); };
+  const changePhone = (digits) => { setPhone(digits); persist({ phone: digits || null }); };
   const changeSetting = (set, key) => (v) => { set(v); persistSettings({ [key]: v }); };
   const changeGroup = (id, g) => {
     setPeople((ps) => ps.map((p) => (p.id === id ? { ...p, g } : p)));
@@ -243,6 +246,16 @@ export default function App() {
     }
   }), []);
 
+  // Re-render when the hour's up so the send button comes back.
+  const nextSendAt = api.nextSendFor(myPulse);
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const wait = nextSendAt - Date.now();
+    if (!(wait > 0)) return;
+    const timer = setTimeout(() => setTick((n) => n + 1), wait + 500);
+    return () => clearTimeout(timer);
+  }, [+nextSendAt]);
+
   const sendPulse = async () => {
     setSent(true);
     setSendError(false);
@@ -254,9 +267,12 @@ export default function App() {
       // Save the level first so the notification describes where you are now.
       await api.saveProfile(uid, { level });
       const id = await api.sendPulse({ level, reason: level <= 40 ? reason : null, groups: pulseTo });
-      setMyPulse({ id, seen: [] });
-    } catch {
-      setSendError(true);
+      setMyPulse({ id, at: new Date().toISOString(), seen: [] });
+    } catch (e) {
+      // Already sent one this hour (another device, say): pick it up so the
+      // button shows when you can send again.
+      if (String(e?.message).includes("one pulse an hour")) refresh();
+      else setSendError(true);
     }
   };
 
@@ -312,7 +328,7 @@ export default function App() {
               {() => (
                 <YouScreen
                   level={level} setLevel={changeLevel} reason={reason} setReason={changeReason}
-                  sent={sent} sendPulse={sendPulse} sendError={sendError} matches={matches} nudge={nudge}
+                  sent={sent} sendPulse={sendPulse} sendError={sendError} nextSendAt={nextSendAt} matches={matches} nudge={nudge}
                   openQuiz={() => setQuiz(true)}
                   wantsChat={wantsChat} setWantsChat={changeWantsChat}
                   myWindow={myWindow} setMyWindow={changeWindow}
@@ -340,6 +356,7 @@ export default function App() {
           <SettingsScreen
             onClose={() => setSettingsOpen(false)}
             name={me.display_name} setName={changeName}
+            phone={phone} setPhone={changePhone}
             people={people} setGroup={changeGroup}
             mbti={mbti} setMbti={changeSetting(setMbti, "mbti")}
             songs={songs} setSongs={changeSetting(setSongs, "songs")}

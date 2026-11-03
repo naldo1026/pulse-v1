@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, ScrollView, Pressable, Dimensions } from "react-native";
+import { View, Text, ScrollView, Pressable, Dimensions, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, FONTS, T } from "../theme";
 import { GROUPS, statusFor } from "../lib/data";
@@ -10,8 +10,82 @@ import Icon from "../components/Icon";
 import LightStreak from "../components/LightStreak";
 
 const RING = 104;
+// Past this many, a group reads better as a list than a ring.
+const RING_MAX = 5;
+const ROW_ORB = 40;
 
 const moodOf = (avg) => (avg <= 35 ? "mostly quiet" : avg >= 70 ? "plenty of energy" : "a mixed bag");
+
+// Opens WhatsApp with the message typed out. Without a number, WhatsApp
+// asks who to send it to.
+const openWhatsApp = (ph, text) => Linking.openURL(`https://wa.me/${ph || ""}?text=${encodeURIComponent(text)}`);
+
+// One person's details and what you can do about them. pulse: { id, seen }
+// if they sent you one today. joined: "in" | "maybe" | undefined.
+// onHeaderPress lets the list collapse it again.
+function PersonPanel({ p, pulse, markSeen, joined, join, onHeaderPress, style }) {
+  const t = useTheme();
+  return (
+    <Panel style={style}>
+      <Pressable onPress={onHeaderPress} disabled={!onHeaderPress} style={{ flexDirection: "row", alignItems: "flex-start" }}>
+        <View style={{ flex: 1 }}>
+          <Display size={24}>{p.n}</Display>
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 2 }}>{p.note}</Text>
+        </View>
+        <View style={{ alignItems: "flex-end", paddingTop: 4 }}>
+          <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: t.ink }}>{statusFor(p.l).t}</Text>
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, marginTop: 2 }}>{p.ago}</Text>
+        </View>
+      </Pressable>
+
+      {p.l <= 40 && p.chat && (
+        <Btn
+          variant="secondary"
+          onPress={() => openWhatsApp(p.ph, "Hey, saw you're low and up for a chat. Everything good?")}
+          style={{ marginTop: 16, paddingVertical: 11 }}
+        >
+          Message on WhatsApp
+        </Btn>
+      )}
+
+      {p.extra && (
+        <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderColor: t.line }}>
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>{p.n} is {p.extra}.</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+            <Btn
+              variant={joined === "in" ? "secondary" : "primary"}
+              onPress={() => join(p.id, "in")}
+              style={{ flex: 2, paddingVertical: 11 }}
+            >
+              {joined === "in" ? "You're in" : "I'm in"}
+            </Btn>
+            <Btn variant={joined === "maybe" ? "secondary" : "ghost"} onPress={() => join(p.id, "maybe")} style={{ flex: 1, paddingVertical: 11 }}>
+              Maybe
+            </Btn>
+          </View>
+          <Btn
+            variant="secondary"
+            onPress={() => openWhatsApp(p.ph, `Hey, saw you're ${p.extra}. Fancy meeting up?`)}
+            style={{ marginTop: 8, paddingVertical: 11 }}
+          >
+            Message on WhatsApp
+          </Btn>
+        </View>
+      )}
+
+      {pulse && (
+        <Pressable
+          onPress={() => markSeen(p.id)}
+          disabled={pulse.seen}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16, paddingVertical: 11, borderRadius: 100, borderWidth: 1, borderColor: t.lineStrong }}
+        >
+          {pulse.seen && <Icon name="check" size={16} color={t.ink} />}
+          <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: pulse.seen ? t.ink : t.muted }}>{pulse.seen ? "Seen" : "Mark as seen"}</Text>
+        </Pressable>
+      )}
+    </Panel>
+  );
+}
 
 // pulses: sender id -> { id, seen } for pulses sent to you today.
 // joined: person id -> "in" | "maybe".
@@ -19,12 +93,56 @@ function CirclePage({ people, me, pulses, markSeen, joined, join, focus, openSet
   const t = useTheme();
   const [sel, setSel] = useState(null);
   const chosen = sel ? people.find((p) => p.id === sel) : null;
-  const pulse = chosen && pulses[chosen.id];
+  const toggle = (id) => setSel(sel === id ? null : id);
+  const panelFor = (p, props) => (
+    <PersonPanel p={p} pulse={pulses[p.id]} markSeen={markSeen} joined={joined[p.id]} join={join} {...props} />
+  );
 
   useEffect(() => {
     if (focus && people.some((p) => p.id === focus.id)) setSel(focus.id);
   }, [focus]);
   const avg = people.length ? Math.round(people.reduce((a, p) => a + p.l, 0) / people.length) : 0;
+
+  const summary = (
+    <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.muted, textAlign: "center" }}>
+      {people.length ? `${people.length} ${people.length === 1 ? "person" : "people"} · ${moodOf(avg)}` : "Nobody here yet"}
+    </Text>
+  );
+
+  // A list: tapping a row opens it in place, so the panel never ends up
+  // below the fold.
+  if (people.length > RING_MAX) {
+    return (
+      <ScrollView style={{ width }} contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 }}>
+        {summary}
+        <View style={{ marginTop: 12 }}>
+          {people.map((p, i) => (sel === p.id ? (
+            <View key={p.id}>{panelFor(p, { onHeaderPress: () => setSel(null), style: { marginVertical: 8 } })}</View>
+          ) : (
+            <Pressable
+              key={p.id}
+              onPress={() => toggle(p.id)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, borderTopWidth: i && people[i - 1].id !== sel ? 1 : 0, borderColor: t.line }}
+            >
+              <View style={{ width: ROW_ORB, height: ROW_ORB }}>
+                <View style={{ position: "absolute", left: ROW_ORB / 2, top: ROW_ORB / 2 }}>
+                  <Orb p={p} size={ROW_ORB} onPress={() => toggle(p.id)} />
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={{ fontFamily: FONTS.medium, fontSize: T.body, color: t.ink }}>{p.n}</Text>
+                <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.muted, marginTop: 2 }}>{p.extra ? p.extra[0].toUpperCase() + p.extra.slice(1) : p.note}</Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.ink }}>{statusFor(p.l).t}</Text>
+                <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, marginTop: 2 }}>{p.ago}</Text>
+              </View>
+            </Pressable>
+          )))}
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={{ width }} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
@@ -42,7 +160,7 @@ function CirclePage({ people, me, pulses, markSeen, joined, join, focus, openSet
           const a = (i / people.length) * Math.PI * 2 - Math.PI / 2;
           return (
             <View key={p.id} style={{ position: "absolute", left: "50%", top: "50%", marginLeft: Math.cos(a) * RING, marginTop: Math.sin(a) * RING }}>
-              <Orb p={p} size={52} selected={sel === p.id} onPress={() => setSel(sel === p.id ? null : p.id)} />
+              <Orb p={p} size={52} selected={sel === p.id} onPress={() => toggle(p.id)} />
               <View pointerEvents="none" style={{ position: "absolute", top: 32, left: -40, width: 80, alignItems: "center" }}>
                 <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.muted }}>{p.n}</Text>
               </View>
@@ -51,57 +169,13 @@ function CirclePage({ people, me, pulses, markSeen, joined, join, focus, openSet
         })}
       </View>
 
-      <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.muted, textAlign: "center" }}>
-        {people.length ? `${people.length} ${people.length === 1 ? "person" : "people"} · ${moodOf(avg)}` : "Nobody here yet"}
-      </Text>
+      {summary}
 
       {people.length === 0 && (
         <Btn variant="secondary" onPress={openSettings} style={{ marginTop: 16, alignSelf: "center", paddingVertical: 11 }}>Move someone here</Btn>
       )}
 
-      {chosen && (
-        <Panel style={{ marginTop: 20 }}>
-          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-            <View style={{ flex: 1 }}>
-              <Display size={24}>{chosen.n}</Display>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 2 }}>{chosen.note}</Text>
-            </View>
-            <View style={{ alignItems: "flex-end", paddingTop: 4 }}>
-              <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: t.ink }}>{statusFor(chosen.l).t}</Text>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, marginTop: 2 }}>{chosen.ago}</Text>
-            </View>
-          </View>
-
-          {chosen.extra && (
-            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderColor: t.line }}>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>{chosen.n} is {chosen.extra}.</Text>
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-                <Btn
-                  variant={joined[chosen.id] === "in" ? "secondary" : "primary"}
-                  onPress={() => join(chosen.id, "in")}
-                  style={{ flex: 2, paddingVertical: 11 }}
-                >
-                  {joined[chosen.id] === "in" ? "You're in" : "I'm in"}
-                </Btn>
-                <Btn variant={joined[chosen.id] === "maybe" ? "secondary" : "ghost"} onPress={() => join(chosen.id, "maybe")} style={{ flex: 1, paddingVertical: 11 }}>
-                  Maybe
-                </Btn>
-              </View>
-            </View>
-          )}
-
-          {pulse && (
-            <Pressable
-              onPress={() => markSeen(chosen.id)}
-              disabled={pulse.seen}
-              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16, paddingVertical: 11, borderRadius: 100, borderWidth: 1, borderColor: t.lineStrong }}
-            >
-              {pulse.seen && <Icon name="check" size={16} color={t.ink} />}
-              <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: pulse.seen ? t.ink : t.muted }}>{pulse.seen ? "Seen" : "Mark as seen"}</Text>
-            </Pressable>
-          )}
-        </Panel>
-      )}
+      {chosen && panelFor(chosen, { style: { marginTop: 20 } })}
     </ScrollView>
   );
 }
