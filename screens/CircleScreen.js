@@ -6,6 +6,7 @@ import { GROUPS, statusFor } from "../lib/data";
 import { noteFor } from "../lib/api";
 import { Btn, Panel, Display, Segmented } from "../components/primitives";
 import Orb from "../components/Orb";
+import DoodlePicker from "../components/DoodlePicker";
 import Icon from "../components/Icon";
 import LightStreak from "../components/LightStreak";
 
@@ -23,7 +24,7 @@ const openWhatsApp = (ph, text) => Linking.openURL(`https://wa.me/${ph || ""}?te
 // One person's details and what you can do about them. pulse: { id, seen }
 // if they sent you one today. joined: "in" | "maybe" | undefined.
 // onHeaderPress lets the list collapse it again.
-function PersonPanel({ p, pulse, markSeen, joined, join, onHeaderPress, style }) {
+function PersonPanel({ p, pulse, markSeen, joined, join, pickDoodle, onHeaderPress, style }) {
   const t = useTheme();
   return (
     <Panel style={style}>
@@ -83,19 +84,23 @@ function PersonPanel({ p, pulse, markSeen, joined, join, onHeaderPress, style })
           <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: pulse.seen ? t.ink : t.muted }}>{pulse.seen ? "Seen" : "Mark as seen"}</Text>
         </Pressable>
       )}
+
+      <Btn variant="ghost" onPress={() => pickDoodle(p.id)} style={{ marginTop: 8, paddingVertical: 11 }}>
+        {p.d ? "Change doodle" : "Choose a doodle"}
+      </Btn>
     </Panel>
   );
 }
 
 // pulses: sender id -> { id, seen } for pulses sent to you today.
 // joined: person id -> "in" | "maybe".
-function CirclePage({ people, me, pulses, markSeen, joined, join, focus, openSettings, width }) {
+function CirclePage({ people, me, pulses, markSeen, joined, join, pickDoodle, focus, openSettings, width }) {
   const t = useTheme();
   const [sel, setSel] = useState(null);
   const chosen = sel ? people.find((p) => p.id === sel) : null;
   const toggle = (id) => setSel(sel === id ? null : id);
   const panelFor = (p, props) => (
-    <PersonPanel p={p} pulse={pulses[p.id]} markSeen={markSeen} joined={joined[p.id]} join={join} {...props} />
+    <PersonPanel p={p} pulse={pulses[p.id]} markSeen={markSeen} joined={joined[p.id]} join={join} pickDoodle={pickDoodle} {...props} />
   );
 
   useEffect(() => {
@@ -182,10 +187,12 @@ function CirclePage({ people, me, pulses, markSeen, joined, join, focus, openSet
 
 // focus: { id } from a notification tap. Jumps to that person's group and
 // opens them.
-export default function CircleScreen({ people, pulses, markSeen, nudge, focus, level, reason, wantsChat, myWindow, openSettings }) {
+export default function CircleScreen({ people, pulses, markSeen, nudge, setDoodle, focus, level, reason, wantsChat, myWindow, openSettings }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [joined, setJoined] = useState({});
+  const [picking, setPicking] = useState(null);
+  const pickingFor = picking && people.find((p) => p.id === picking);
   const [page, setPage] = useState(0);
   const [width, setWidth] = useState(Dimensions.get("window").width);
   const scroller = useRef(null);
@@ -250,10 +257,18 @@ export default function CircleScreen({ people, pulses, markSeen, nudge, focus, l
         {GROUPS.map((g) => (
           <CirclePage
             key={g.id} people={people.filter((p) => p.g === g.id)} me={me}
-            pulses={pulses} markSeen={markSeen} joined={joined} join={join} focus={focus} openSettings={openSettings} width={width}
+            pulses={pulses} markSeen={markSeen} joined={joined} join={join} pickDoodle={setPicking} focus={focus} openSettings={openSettings} width={width}
           />
         ))}
       </ScrollView>
+
+      {pickingFor && (
+        <DoodlePicker
+          p={pickingFor}
+          onPick={(d) => { setDoodle(pickingFor.id, d); setPicking(null); }}
+          onDismiss={() => setPicking(null)}
+        />
+      )}
     </View>
   );
 }

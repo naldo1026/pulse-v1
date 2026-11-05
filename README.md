@@ -31,6 +31,7 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
 - **Live updates:** Supabase Realtime tells the app when anyone's level, pulse or seen mark changes, and the app refetches. It also refetches when it comes back to the front, because iOS drops the connection in the background.
 - **Pulses:** sending one inserts a row in `pulses`. A trigger works out the recipients from your groups (anyone you haven't sorted counts as Friends) and calls `notify`, which pushes to their phones. Another trigger allows one pulse an hour per person, and the app shows when you can send again.
 - **WhatsApp:** people can add a number in Settings. The Circle shows a "Message on WhatsApp" button with a drafted message when someone's low with "Open to a chat" on, or has an "I'm around" window. Without a number, WhatsApp asks who to send it to.
+- **Doodles:** tap someone on the Circle to give them a doodle instead of their initial. It's your own label for them, stored on your `groupings` row, so only you see it.
 - **Morning check-in:** cron calls `morning` every 5 minutes. It pushes "Morning. How are you feeling?" to anyone whose check-in time just passed, once a day. Tapping it opens the app on the morning prompt.
 - **Sign-in:** email and password. There's no sign-up in the app. You add people in the Supabase dashboard with a starting password, and they can change it in Settings.
 
@@ -117,6 +118,7 @@ On Android, open it in Chrome and accept the install prompt (or use the menu > A
 theme.js                    Design tokens: light/dark palettes (useTheme), Roboto, type
                             scale, soft shadow. Ink on near-white; colour comes only from
                             the level (battery fluid and the background streak).
+lib/doodles.js              The 60 doodles (Doodle Icons by Khushmeen Sidhu, CC0).
 lib/data.js                 Level colour ramps (THEMES), status copy, quiz, song library.
 lib/supabase.js             Supabase client.
 lib/api.js                  Every read and write, mapped to the shapes screens use.
@@ -130,7 +132,10 @@ components/
                             tinted by the current level. Drifts slowly.
   LiquidCell.js             The battery. Drag to set; waves, bubbles, haptic ticks.
   PulseBurst.js             Full-screen colour wash + haptics when a pulse is sent.
-  Orb.js                    Person on the Circle ring, with a level arc.
+  Orb.js                    Person on the Circle ring, with a level arc and your doodle
+                            for them, or their initial.
+  Doodle.js                 One doodle, drawn in chalk.
+  DoodlePicker.js           Sheet for choosing someone's doodle.
   PeopleEditor.js           Everyone on Pulse, each with a group picker.
   Sheet.js                  Bottom sheet used by MorningPrompt and VibeCheckModal.
   Icon.js                   Small stroke icon set (react-native-svg).
