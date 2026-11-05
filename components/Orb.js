@@ -3,6 +3,7 @@ import { View, Text, Pressable } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { useTheme, FONTS, rgba } from "../theme";
 import { colorFor } from "../lib/data";
+import Doodle from "./Doodle";
 
 export default function Orb({ p, size, onPress, selected }) {
   const t = useTheme();
@@ -30,7 +31,11 @@ export default function Orb({ p, size, onPress, selected }) {
           alignItems: "center", justifyContent: "center",
         }}
       >
-        <Text style={{ fontFamily: FONTS.medium, fontSize: size * 0.28, color: t.ink }}>{p.n[0]}</Text>
+        {p.d ? (
+          <Doodle id={p.d} size={size * 0.52} color={t.ink} />
+        ) : (
+          <Text style={{ fontFamily: FONTS.medium, fontSize: size * 0.28, color: t.ink }}>{p.n[0]}</Text>
+        )}
       </View>
     </Pressable>
   );

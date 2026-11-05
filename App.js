@@ -215,6 +215,11 @@ export default function App() {
     setPeople((ps) => ps.map((p) => (p.id === id ? { ...p, g } : p)));
     api.setGroup(uid, id, g).catch(() => {});
   };
+  const changeDoodle = (id, d) => {
+    const p = people.find((x) => x.id === id);
+    setPeople((ps) => ps.map((x) => (x.id === id ? { ...x, d } : x)));
+    api.setDoodle(uid, id, p.g, d).catch(() => {});
+  };
   const turnOnPush = () => enablePush(uid).then(setPushPerm, () => setPushPerm(pushPermission()));
   const nudge = (id, kind) => api.nudge(id, kind).catch(() => {});
   const markSeen = (personId) => {
@@ -340,7 +345,7 @@ export default function App() {
             <Tab.Screen name="circle">
               {() => (
                 <CircleScreen
-                  people={people} pulses={toMe} markSeen={markSeen} nudge={nudge} focus={focus}
+                  people={people} pulses={toMe} markSeen={markSeen} nudge={nudge} setDoodle={changeDoodle} focus={focus}
                   level={level} reason={reason} wantsChat={wantsChat} myWindow={myWindow}
                   openSettings={() => setSettingsOpen(true)}
                 />
