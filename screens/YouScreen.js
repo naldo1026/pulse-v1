@@ -38,7 +38,7 @@ export default function YouScreen({
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <LightStreak level={level} />
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: insets.top + 8, paddingHorizontal: 24 }}>
-        <Display size={24}>Pulse-v1</Display>
+        <Display size={24}>Pulse</Display>
         <Pressable onPress={openSettings} hitSlop={12} accessibilityRole="button" accessibilityLabel="Settings">
           <Icon name="settings" color={t.muted} />
         </Pressable>
