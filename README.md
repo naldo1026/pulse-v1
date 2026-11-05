@@ -65,12 +65,12 @@ openssl rand -hex 32               # PUSH_SECRET: lets only the database trigger
 
 ### 3. Database and functions
 
-`npx supabase` runs the CLI without installing it. `link` and `db push` ask for the database password.
+`npx supabase` runs the CLI without installing it. `link` and `db push` ask for the database password. Keep `--remote` on `db push`: without it, CLI 3 pushes to your local stack instead of the project you linked.
 
 ```bash
 npx supabase login
 npx supabase link --project-ref YOUR-PROJECT-REF
-npx supabase db push
+npx supabase db push --remote
 npx supabase secrets set --env-file supabase/functions/.env
 npx supabase functions deploy notify
 npx supabase functions deploy morning
