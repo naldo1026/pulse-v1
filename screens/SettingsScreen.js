@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, Modal, ScrollView, Pressable, TextInput } from "react-native";
+import { View, Text, Modal, ScrollView, Pressable, TextInput, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, FONTS, T } from "../theme";
-import { MBTI, MBTI_NOTE, THEMES, LIBRARY, stopsFor } from "../lib/data";
+import { MBTI, MBTI_NOTE, DONT_KNOW, typeFor, TYPE_TEST_URL, THEMES, LIBRARY, stopsFor } from "../lib/data";
 import { Btn, Label, Panel, Display, Segmented, Toggle } from "../components/primitives";
 import PeopleEditor from "../components/PeopleEditor";
 import Icon from "../components/Icon";
@@ -151,17 +151,29 @@ export default function SettingsScreen({
             <Segmented options={TIMES} value={morningTime} onChange={setMorningTime} />
           </Section>
 
-          <Section title="Personality type" note={mbti ? MBTI_NOTE(mbti) : "Optional. It tailors your weekly summary."}>
+          <Section title="Personality type">
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              {MBTI.map((k) => {
+              {[...MBTI, DONT_KNOW].map((k) => {
                 const on = mbti === k;
                 return (
-                  <Pressable key={k} onPress={() => setMbti(on ? null : k)} style={{ width: "23.5%", paddingVertical: 10, borderRadius: 100, alignItems: "center", backgroundColor: on ? t.ink : t.surface, borderWidth: 1, borderColor: on ? t.ink : t.line }}>
-                    <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, letterSpacing: 0.4, color: on ? t.inverse : t.muted }}>{k}</Text>
+                  <Pressable key={k} onPress={() => setMbti(on ? null : k)} style={{ width: k === DONT_KNOW ? "100%" : "23.5%", paddingVertical: 10, borderRadius: 100, alignItems: "center", backgroundColor: on ? t.ink : t.surface, borderWidth: 1, borderColor: on ? t.ink : t.line }}>
+                    <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, letterSpacing: k === DONT_KNOW ? 0 : 0.4, color: on ? t.inverse : t.muted }}>{k === DONT_KNOW ? "Don't know" : k}</Text>
                   </Pressable>
                 );
               })}
             </View>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.faint, marginTop: 8, marginHorizontal: 4 }}>
+              {typeFor(mbti) ? MBTI_NOTE(mbti) : "Optional, and only you see it. It tailors your weekly summary."}
+            </Text>
+            <Panel style={{ padding: 0, marginTop: 12 }}>
+              <Pressable onPress={() => Linking.openURL(TYPE_TEST_URL).catch(() => {})} accessibilityRole="link" style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16 }}>
+                <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: T.body, color: t.ink }}>Take the free test</Text>
+                <Icon name="chevron" size={16} color={t.faint} />
+              </Pressable>
+            </Panel>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.faint, marginTop: 8, marginHorizontal: 4 }}>
+              Free, about 10 minutes. Come back and pick your four letters: INFP-T is INFP.
+            </Text>
           </Section>
 
           <Section title="Songs">

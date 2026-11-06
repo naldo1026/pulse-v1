@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, FONTS, T } from "../theme";
-import { colorFor } from "../lib/data";
+import { colorFor, typeFor } from "../lib/data";
 import { weekStart } from "../lib/api";
 import { Label, Panel, Display } from "../components/primitives";
 import LightStreak from "../components/LightStreak";
@@ -41,8 +41,9 @@ function daily(days, log, level) {
   });
 }
 
-export default function WeekScreen({ mbti, level, log }) {
+export default function WeekScreen({ mbti: setting, level, log }) {
   const t = useTheme();
+  const mbti = typeFor(setting);
   const insets = useSafeAreaInsets();
   const days = lastWeek();
   const w = daily(days, log, level);
