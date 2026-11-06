@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, Modal, ScrollView, Pressable, TextInput, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, FONTS, T } from "../theme";
-import { MBTI, MBTI_NOTE, DONT_KNOW, typeFor, TYPE_TEST_URL, THEMES, LIBRARY, stopsFor } from "../lib/data";
+import { MBTI, DONT_KNOW, TYPE_TEST_URL, THEMES, LIBRARY, stopsFor } from "../lib/data";
 import { Btn, Label, Panel, Display, Segmented, Toggle } from "../components/primitives";
 import PeopleEditor from "../components/PeopleEditor";
 import Icon from "../components/Icon";
@@ -163,7 +163,7 @@ export default function SettingsScreen({
               })}
             </View>
             <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.faint, marginTop: 8, marginHorizontal: 4 }}>
-              {typeFor(mbti) ? MBTI_NOTE(mbti) : "Optional, and only you see it. It tailors your weekly summary."}
+              Optional, and only you see it. It tailors your weekly summary.
             </Text>
             <Panel style={{ padding: 0, marginTop: 12 }}>
               <Pressable onPress={() => Linking.openURL(TYPE_TEST_URL).catch(() => {})} accessibilityRole="link" style={{ flexDirection: "row", alignItems: "center", paddingVertical: 14, paddingHorizontal: 16 }}>
