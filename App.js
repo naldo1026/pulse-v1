@@ -23,6 +23,7 @@ import SettingsScreen from "./screens/SettingsScreen";
 import PulseBurst from "./components/PulseBurst";
 import CheckInSheet from "./components/CheckInSheet";
 import VibeCheckModal from "./components/VibeCheckModal";
+import ReasonCard from "./components/ReasonCard";
 import Icon from "./components/Icon";
 import { Btn } from "./components/primitives";
 import { useTheme, FONTS, T } from "./theme";
@@ -38,6 +39,10 @@ const TABS = { you: ["Me", "battery"], circle: ["Circle", "circle"], week: ["Wee
 
 // Read at module load, once per page load, before anything can re-render.
 const LAUNCH = takeLaunchParams();
+
+// When a level change earns a "What made this change?" card.
+const REASON_MIN_CHANGE = 10;
+const REASON_EVERY_MS = 30 * 60 * 1000;
 
 // Past this morning's check-in time, still before noon, and no level set
 // since. Covers people who ignored the notification or don't have one.
@@ -114,6 +119,11 @@ export default function App() {
   const [checkIn, setCheckIn] = useState(null);
   const [dragging, setDragging] = useState(false);
   const [pickingDoodle, setPickingDoodle] = useState(false);
+  // The level change the card is asking about: lastLevelChange's result, plus
+  // shownAt once it's actually on screen.
+  const [reasonPrompt, setReasonPrompt] = useState(null);
+  // The level last saved, to tell a real change from saving the same level again.
+  const savedLevel = useRef(null);
   // Apply immediately so this render already uses the right ramp, including
   // when the phone flips between light and dark.
   setRamp(theme, t.scheme);
@@ -137,6 +147,7 @@ export default function App() {
   const hydrate = useCallback(() => {
     setFailed(false);
     api.loadMe(uid).then(({ profile: p, settings: s }) => {
+      savedLevel.current = p.level;
       setLevel(p.level);
       setReason(p.reason);
       setWantsChat(p.wants_chat);
@@ -203,9 +214,13 @@ export default function App() {
   // Fetched when the morning prompt opens, so picking a level can go straight
   // into the questions in the same sheet.
   const morningCheckIn = useRef(null);
+  const reasonShownAt = useRef(0);
+  const reasonWrites = useRef(Promise.resolve());
   useEffect(() => {
     checkedInOn.current = null;
     setCheckIn(null);
+    reasonShownAt.current = 0;
+    setReasonPrompt(null);
   }, [uid]);
 
   // Today's check-in if it's still to do, otherwise null. If this fails, the
@@ -222,9 +237,11 @@ export default function App() {
       return null;
     }
   };
+  // Resolves with whether the check-in is going to ask.
   const askCheckIn = async () => {
     const found = await fetchCheckIn();
     if (found) setCheckIn((c) => c || found);
+    return !!found;
   };
   const saveCheckIn = (status, answers) => {
     checkedInOn.current = checkIn.date;
@@ -235,11 +252,48 @@ export default function App() {
     setMorning(false);
   };
 
+  // Queues the card if this level change is worth asking about. The database
+  // has the last time it showed, so a reload can't get round the 30 minutes.
+  const askReason = async () => {
+    if (Date.now() - reasonShownAt.current < REASON_EVERY_MS) return;
+    try {
+      const [change, lastAt] = await Promise.all([api.lastLevelChange(uid), api.lastReasonAt(uid)]);
+      if (!change || Math.abs(change.after - change.before) < REASON_MIN_CHANGE) return;
+      // The level before this one is from an earlier day, so this is today's first.
+      if (api.localDate(new Date(change.prevAt)) !== api.localDate()) return;
+      if (lastAt && Date.now() - lastAt < REASON_EVERY_MS) return;
+      setReasonPrompt((p) => p || change);
+    } catch {
+      // Never mind. It only ever asks about the change just made.
+    }
+  };
+  // Only one prompt at a time, and the check-in goes first.
+  const afterLevelSaved = async (changed) => {
+    if (!(await askCheckIn()) && changed) askReason();
+  };
+  // In order, so an answer can't arrive before the row it updates.
+  const writeReason = (prompt, reason = null, source = null) => {
+    reasonWrites.current = reasonWrites.current
+      .then(() => api.saveChangeReason(uid, { ...prompt, reason, source }))
+      .catch(() => {});
+  };
+  const answerReason = (reason, source) => {
+    writeReason(reasonPrompt, reason, source);
+    setReasonPrompt(null);
+  };
+  // Repeats the row written when it showed, in case that write failed.
+  const skipReason = () => {
+    writeReason(reasonPrompt);
+    setReasonPrompt(null);
+  };
+
   // Dragging fires on every percent, so only save once the drag settles.
   const levelTimer = useRef(null);
   const saveLevel = (v) => {
     levelTimer.current = null;
-    if (uid) api.saveProfile(uid, { level: v }).then(askCheckIn, () => {});
+    const changed = v !== savedLevel.current;
+    savedLevel.current = v;
+    if (uid) api.saveProfile(uid, { level: v }).then(() => afterLevelSaved(changed), () => {});
   };
   const changeLevel = (v) => {
     setLevel(v);
@@ -297,6 +351,10 @@ export default function App() {
     if (morning) fetchCheckIn().then((c) => { morningCheckIn.current = c; });
   }, [morning]);
 
+  // A card left up is about a change that's no longer "just now" by the time
+  // you're back. It's already saved as a skip, so it can just go.
+  useEffect(() => onForeground(() => setReasonPrompt(null)), []);
+
   // Notification taps while the app is open.
   useEffect(() => onNotificationOpen(({ person, morning: m }) => {
     if (m) setMorning(true);
@@ -326,10 +384,12 @@ export default function App() {
     const dragged = levelTimer.current !== null;
     clearTimeout(levelTimer.current);
     levelTimer.current = null;
+    const changed = level !== savedLevel.current;
+    savedLevel.current = level;
     try {
       // Save the level first so the notification describes where you are now.
       await api.saveProfile(uid, { level });
-      if (dragged) askCheckIn();
+      if (dragged) afterLevelSaved(changed);
       const id = await api.sendPulse({ level, reason: level <= 40 ? reason : null, groups: pulseTo });
       setMyPulse({ id, at: new Date().toISOString(), seen: [] });
     } catch (e) {
@@ -351,10 +411,21 @@ export default function App() {
 
   const seenBy = (myPulse?.seen || []).map((id) => people.find((p) => p.id === id)?.n).filter(Boolean);
 
-  // The check-in waits for the burst, any other sheet and a finger on the
-  // battery. The burst is over well before `sent` clears.
-  const checkInWaits = sent || quiz || settingsOpen || pickingDoodle || dragging;
+  // Prompts wait for the burst, any other sheet and a finger on the battery.
+  // The burst is over well before `sent` clears.
+  const promptWaits = sent || quiz || settingsOpen || pickingDoodle || dragging;
   const askingMorning = morning && !checkIn;
+  const reasonHidden = promptWaits || morning || !!checkIn;
+
+  // One row per prompt, written as soon as it's on screen. Closing the app
+  // then counts as a skip, and the 30 minutes runs from here.
+  useEffect(() => {
+    if (!reasonPrompt || reasonPrompt.shownAt || reasonHidden) return;
+    const shown = { ...reasonPrompt, shownAt: new Date().toISOString() };
+    reasonShownAt.current = Date.now();
+    setReasonPrompt(shown);
+    writeReason(shown);
+  }, [reasonPrompt, reasonHidden]);
 
   if (!fontsLoaded) {
     return (
@@ -384,6 +455,7 @@ export default function App() {
         onFinish={({ name, level: l }) => {
           setLevel(l);
           setMe((m) => ({ ...m, display_name: name, onboarded: true, level_updated_at: new Date().toISOString() }));
+          savedLevel.current = l;
           persist({ display_name: name, level: l, onboarded: true });
         }}
       />
@@ -398,7 +470,7 @@ export default function App() {
                 <YouScreen
                   level={level} setLevel={changeLevel} reason={reason} setReason={changeReason}
                   sent={sent} sendPulse={sendPulse} sendError={sendError} nextSendAt={nextSendAt} matches={matches} nudge={nudge}
-                  openQuiz={() => setQuiz(true)} onDragging={setDragging}
+                  openQuiz={() => setQuiz(true)} onDragging={setDragging} reasonOpen={!!reasonPrompt}
                   wantsChat={wantsChat} setWantsChat={changeWantsChat}
                   myWindow={myWindow} setMyWindow={changeWindow}
                   seenBy={seenBy} openSettings={() => setSettingsOpen(true)}
@@ -435,8 +507,14 @@ export default function App() {
             pushPerm={pushPerm} enablePush={turnOnPush} changePassword={changePassword} signOut={signOut}
           />
         )}
+        {reasonPrompt && (
+          <ReasonCard
+            before={reasonPrompt.before} after={reasonPrompt.after} hidden={reasonHidden}
+            onAnswer={answerReason} onSkip={skipReason}
+          />
+        )}
         {burst > 0 && <PulseBurst key={burst} level={level} />}
-        {(askingMorning || (checkIn && !checkInWaits)) && (
+        {(askingMorning || (checkIn && !promptWaits)) && (
           <CheckInSheet
             morning={askingMorning} checkIn={checkIn}
             onPick={pickMorningLevel} onLater={() => setMorning(false)}

@@ -9,6 +9,7 @@ import LiquidCell from "../components/LiquidCell";
 import Icon from "../components/Icon";
 import LightStreak from "../components/LightStreak";
 import { heartbeat } from "../components/PulseBurst";
+import { CARD_ROOM } from "../components/ReasonCard";
 
 const WINDOWS = [["an hour", "For an hour"], ["till 10", "Till 10"], ["all evening", "All evening"]];
 
@@ -16,7 +17,7 @@ const listNames = (names) => (names.length === 1 ? names[0] : `${names.slice(0, 
 
 export default function YouScreen({
   level, setLevel, reason, setReason, sent, sendPulse, matches,
-  openQuiz, onDragging, wantsChat, setWantsChat, myWindow, setMyWindow,
+  openQuiz, onDragging, reasonOpen, wantsChat, setWantsChat, myWindow, setMyWindow,
   seenBy, openSettings, members, pulseTo, setPulseTo, sendError, nextSendAt, nudge,
 }) {
   const t = useTheme();
@@ -44,7 +45,7 @@ export default function YouScreen({
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: insets.bottom + 32 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: insets.bottom + 32 + (reasonOpen ? CARD_ROOM : 0) }}>
         <View style={{ alignItems: "center" }}>
           <Animated.View style={pulseStyle}>
             <LiquidCell level={level} onChange={setLevel} onDragging={onDragging} w={128} h={244} />
@@ -58,7 +59,8 @@ export default function YouScreen({
 
         {level <= 40 && (
           <View style={{ marginTop: 32 }}>
-            <Label>What's going on?</Label>
+            <Label>Tell your circle</Label>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.muted, marginTop: 2 }}>Shared with your circle</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
               {REASONS.map((r) => (
                 <Chip key={r} on={reason === r} onPress={() => setReason(reason === r ? null : r)}>{r}</Chip>
