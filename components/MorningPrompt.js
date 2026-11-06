@@ -3,14 +3,14 @@ import { View, Text, Pressable } from "react-native";
 import { useTheme, FONTS, T } from "../theme";
 import { colorFor } from "../lib/data";
 import { Btn, Display } from "./primitives";
-import Sheet from "./Sheet";
 
 const OPTS = [["Rough", 15], ["Slow", 40], ["Okay", 65], ["Good", 90]];
 
-export default function MorningPrompt({ onPick, onDismiss }) {
+// The first step of CheckInSheet, when the morning prompt is what opened it.
+export default function MorningPrompt({ onPick, onLater }) {
   const t = useTheme();
   return (
-    <Sheet onDismiss={onDismiss}>
+    <>
       <Display size={26}>Morning. How are you feeling?</Display>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 20 }}>
         {OPTS.map(([l, v]) => (
@@ -20,7 +20,7 @@ export default function MorningPrompt({ onPick, onDismiss }) {
           </Pressable>
         ))}
       </View>
-      <Btn variant="ghost" onPress={onDismiss} style={{ marginTop: 8 }}>Later</Btn>
-    </Sheet>
+      <Btn variant="ghost" onPress={onLater} style={{ marginTop: 8 }}>Later</Btn>
+    </>
   );
 }

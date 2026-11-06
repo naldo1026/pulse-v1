@@ -21,7 +21,7 @@ import CircleScreen from "./screens/CircleScreen";
 import WeekScreen from "./screens/WeekScreen";
 import SettingsScreen from "./screens/SettingsScreen";
 import PulseBurst from "./components/PulseBurst";
-import MorningPrompt from "./components/MorningPrompt";
+import CheckInSheet from "./components/CheckInSheet";
 import VibeCheckModal from "./components/VibeCheckModal";
 import Icon from "./components/Icon";
 import { Btn } from "./components/primitives";
@@ -110,6 +110,10 @@ export default function App() {
   const [morningTime, setMorningTime] = useState("07:40");
   const [theme, setTheme] = useState("dusk");
   const [phone, setPhone] = useState("");
+  // { date, questions } once a level's been set and today's check-in is still to do.
+  const [checkIn, setCheckIn] = useState(null);
+  const [dragging, setDragging] = useState(false);
+  const [pickingDoodle, setPickingDoodle] = useState(false);
   // Apply immediately so this render already uses the right ramp, including
   // when the phone flips between light and dark.
   setRamp(theme, t.scheme);
@@ -193,17 +197,64 @@ export default function App() {
   const persist = (patch) => uid && api.saveProfile(uid, patch).catch(() => {});
   const persistSettings = (patch) => uid && api.saveSettings(uid, patch).catch(() => {});
 
+  // The local date we know today's check-in is saved for, so setting a level
+  // again doesn't ask the database every time.
+  const checkedInOn = useRef(null);
+  // Fetched when the morning prompt opens, so picking a level can go straight
+  // into the questions in the same sheet.
+  const morningCheckIn = useRef(null);
+  useEffect(() => {
+    checkedInOn.current = null;
+    setCheckIn(null);
+  }, [uid]);
+
+  // Today's check-in if it's still to do, otherwise null. If this fails, the
+  // next level set tries again: a prompt must never get in the way of a level.
+  const fetchCheckIn = async () => {
+    const date = api.localDate();
+    if (checkedInOn.current === date) return null;
+    try {
+      const [done, questions] = await Promise.all([api.checkedIn(uid, date), api.todaysQuestions(date)]);
+      if (done) checkedInOn.current = date;
+      // Checked again because it may have been finished during the fetch.
+      return checkedInOn.current === date || !questions.length ? null : { date, questions };
+    } catch {
+      return null;
+    }
+  };
+  const askCheckIn = async () => {
+    const found = await fetchCheckIn();
+    if (found) setCheckIn((c) => c || found);
+  };
+  const saveCheckIn = (status, answers) => {
+    checkedInOn.current = checkIn.date;
+    api.saveCheckIn({ status, answers, date: checkIn.date }).catch(() => {});
+  };
+  const closeCheckIn = () => {
+    setCheckIn(null);
+    setMorning(false);
+  };
+
   // Dragging fires on every percent, so only save once the drag settles.
-  const levelTimer = useRef();
+  const levelTimer = useRef(null);
+  const saveLevel = (v) => {
+    levelTimer.current = null;
+    if (uid) api.saveProfile(uid, { level: v }).then(askCheckIn, () => {});
+  };
   const changeLevel = (v) => {
     setLevel(v);
     clearTimeout(levelTimer.current);
-    levelTimer.current = setTimeout(() => persist({ level: v }), 1500);
+    levelTimer.current = setTimeout(() => saveLevel(v), 1500);
   };
   const setLevelNow = (v) => {
     clearTimeout(levelTimer.current);
     setLevel(v);
-    persist({ level: v });
+    saveLevel(v);
+  };
+  const pickMorningLevel = (v) => {
+    setLevelNow(v);
+    if (morningCheckIn.current) setCheckIn(morningCheckIn.current);
+    setMorning(false);
   };
   const changeReason = (r) => { setReason(r); persist({ reason: r }); };
   const changeWantsChat = (v) => { setWantsChat(v); persist({ wants_chat: v }); };
@@ -241,6 +292,11 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [main]);
 
+  useEffect(() => {
+    morningCheckIn.current = null;
+    if (morning) fetchCheckIn().then((c) => { morningCheckIn.current = c; });
+  }, [morning]);
+
   // Notification taps while the app is open.
   useEffect(() => onNotificationOpen(({ person, morning: m }) => {
     if (m) setMorning(true);
@@ -267,10 +323,13 @@ export default function App() {
     setBurst((b) => b + 1);
     setTimeout(() => setSent(false), 1900);
     setMatches(people.filter((p) => p.l > 40 && Math.abs(p.l - level) <= 18 && p.extra).map((p) => ({ id: p.id, n: p.n, phrase: "Meet up" })));
+    const dragged = levelTimer.current !== null;
     clearTimeout(levelTimer.current);
+    levelTimer.current = null;
     try {
       // Save the level first so the notification describes where you are now.
       await api.saveProfile(uid, { level });
+      if (dragged) askCheckIn();
       const id = await api.sendPulse({ level, reason: level <= 40 ? reason : null, groups: pulseTo });
       setMyPulse({ id, at: new Date().toISOString(), seen: [] });
     } catch (e) {
@@ -291,6 +350,11 @@ export default function App() {
   };
 
   const seenBy = (myPulse?.seen || []).map((id) => people.find((p) => p.id === id)?.n).filter(Boolean);
+
+  // The check-in waits for the burst, any other sheet and a finger on the
+  // battery. The burst is over well before `sent` clears.
+  const checkInWaits = sent || quiz || settingsOpen || pickingDoodle || dragging;
+  const askingMorning = morning && !checkIn;
 
   if (!fontsLoaded) {
     return (
@@ -334,7 +398,7 @@ export default function App() {
                 <YouScreen
                   level={level} setLevel={changeLevel} reason={reason} setReason={changeReason}
                   sent={sent} sendPulse={sendPulse} sendError={sendError} nextSendAt={nextSendAt} matches={matches} nudge={nudge}
-                  openQuiz={() => setQuiz(true)}
+                  openQuiz={() => setQuiz(true)} onDragging={setDragging}
                   wantsChat={wantsChat} setWantsChat={changeWantsChat}
                   myWindow={myWindow} setMyWindow={changeWindow}
                   seenBy={seenBy} openSettings={() => setSettingsOpen(true)}
@@ -347,7 +411,7 @@ export default function App() {
                 <CircleScreen
                   people={people} pulses={toMe} markSeen={markSeen} nudge={nudge} setDoodle={changeDoodle} focus={focus}
                   level={level} reason={reason} wantsChat={wantsChat} myWindow={myWindow}
-                  openSettings={() => setSettingsOpen(true)}
+                  openSettings={() => setSettingsOpen(true)} onPicking={setPickingDoodle}
                 />
               )}
             </Tab.Screen>
@@ -372,7 +436,13 @@ export default function App() {
           />
         )}
         {burst > 0 && <PulseBurst key={burst} level={level} />}
-        {morning && <MorningPrompt onPick={(v) => { setLevelNow(v); setMorning(false); }} onDismiss={() => setMorning(false)} />}
+        {(askingMorning || (checkIn && !checkInWaits)) && (
+          <CheckInSheet
+            morning={askingMorning} checkIn={checkIn}
+            onPick={pickMorningLevel} onLater={() => setMorning(false)}
+            onSave={saveCheckIn} onClose={closeCheckIn}
+          />
+        )}
         {quiz && <VibeCheckModal onDone={(v) => { setLevelNow(v); setQuiz(false); }} onSkip={() => setQuiz(false)} />}
       </View>
     );

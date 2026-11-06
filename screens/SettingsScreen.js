@@ -147,7 +147,7 @@ export default function SettingsScreen({
             </Panel>
           </Section>
 
-          <Section title="Morning check-in" note={morningTime === "off" ? "No morning prompt." : "One quick question, once a day."}>
+          <Section title="Morning check-in" note={morningTime === "off" ? "No morning prompt." : "A few quick taps, once a day."}>
             <Segmented options={TIMES} value={morningTime} onChange={setMorningTime} />
           </Section>
 

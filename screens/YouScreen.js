@@ -16,7 +16,7 @@ const listNames = (names) => (names.length === 1 ? names[0] : `${names.slice(0, 
 
 export default function YouScreen({
   level, setLevel, reason, setReason, sent, sendPulse, matches,
-  openQuiz, wantsChat, setWantsChat, myWindow, setMyWindow,
+  openQuiz, onDragging, wantsChat, setWantsChat, myWindow, setMyWindow,
   seenBy, openSettings, members, pulseTo, setPulseTo, sendError, nextSendAt, nudge,
 }) {
   const t = useTheme();
@@ -47,7 +47,7 @@ export default function YouScreen({
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: insets.bottom + 32 }}>
         <View style={{ alignItems: "center" }}>
           <Animated.View style={pulseStyle}>
-            <LiquidCell level={level} onChange={setLevel} w={128} h={244} />
+            <LiquidCell level={level} onChange={setLevel} onDragging={onDragging} w={128} h={244} />
           </Animated.View>
           <Display size={40} style={{ marginTop: 24 }}>{s.t}</Display>
           <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 2 }}>{s.s}</Text>
