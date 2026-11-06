@@ -34,7 +34,7 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
 - **Doodles:** tap someone on the Circle to give them a doodle instead of their initial. It's your own label for them, stored on your `groupings` row, so only you see it.
 - **Morning check-in:** cron calls `morning` every 5 minutes. It pushes "Morning. How are you feeling?" to anyone whose check-in time just passed, once a day. Tapping it opens the app on the morning prompt.
 - **Check-ins:** after your first level of the day, from the morning prompt, a drag or the quiz, at any time of day, the app asks 2 fixed questions and 1 rotating one. Finishing or skipping saves that day's row, and it won't ask again until tomorrow. If the app closes before either, the next level asks again. Turning Morning check-in off only stops the push. Answers belong only to the user, and aren't in the realtime publication. Questions live in `check_in_questions`, so you can edit them in the Supabase dashboard without a deploy. Retire a question with `active` and never reuse its id.
-- **Change reasons:** the table and `lib/api.js` functions are in, with no UI yet. Like check-in answers, they belong only to the user.
+- **Change reasons:** after a level change of 10 or more that isn't the first of the day, a small card asks "What made this change?", at most once every 30 minutes. One `level_reasons` row is written as soon as it shows, with a null reason, so skipping or closing the app counts as a skip. Like check-in answers, reasons belong only to the user. The chips under "Tell your circle" on the Me tab are the shared ones: those go to `profiles.reason` and into pulses.
 - **Sign-in:** email and password. There's no sign-up in the app. You add people in the Supabase dashboard with a starting password, and they can change it in Settings.
 
 **iPhone limits:**
@@ -142,6 +142,7 @@ components/
   Sheet.js                  Bottom sheet used by CheckInSheet, VibeCheckModal and DoodlePicker.
   CheckInSheet.js           The day's check-in questions, with MorningPrompt first when
                             that's what opened it.
+  ReasonCard.js             "What made this change?" Private chips or up to 3 typed words.
   Icon.js                   Small stroke icon set (react-native-svg).
 screens/
   InstallScreen.js          iPhone in Safari: how to add to the home screen.
