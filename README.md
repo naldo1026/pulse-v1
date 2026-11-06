@@ -33,6 +33,7 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
 - **WhatsApp:** people can add a number in Settings. The Circle shows a "Message on WhatsApp" button with a drafted message when someone's low with "Open to a chat" on, or has an "I'm around" window. Without a number, WhatsApp asks who to send it to.
 - **Doodles:** tap someone on the Circle to give them a doodle instead of their initial. It's your own label for them, stored on your `groupings` row, so only you see it.
 - **Morning check-in:** cron calls `morning` every 5 minutes. It pushes "Morning. How are you feeling?" to anyone whose check-in time just passed, once a day. Tapping it opens the app on the morning prompt.
+- **Check-ins and change reasons:** the tables and `lib/api.js` functions are in, with no UI yet. Answers and reasons belong only to the user, and aren't in the realtime publication. Questions live in `check_in_questions`, so you can edit them in the Supabase dashboard without a deploy. Retire a question with `active` and never reuse its id.
 - **Sign-in:** email and password. There's no sign-up in the app. You add people in the Supabase dashboard with a starting password, and they can change it in Settings.
 
 **iPhone limits:**
@@ -154,6 +155,8 @@ supabase/
   migrations/               Tables, RLS, triggers, cron, realtime. The whole backend.
   functions/notify          Pushes pulses and nudges.
   functions/morning         Pushes the morning check-in.
+  tests/rls_check.sql       Checks other people can't reach your check-ins and reasons.
+                            Local stack only; how to run it is at the top of the file.
 public/                     Page template, manifest, service worker (sw.js), icons.
                             Expo copies it into dist/ on export.
 assets/icon.svg             App icon source (battery + streak). The PNGs in assets/ and
