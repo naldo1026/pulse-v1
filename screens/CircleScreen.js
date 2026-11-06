@@ -187,12 +187,14 @@ function CirclePage({ people, me, pulses, markSeen, joined, join, pickDoodle, fo
 
 // focus: { id } from a notification tap. Jumps to that person's group and
 // opens them.
-export default function CircleScreen({ people, pulses, markSeen, nudge, setDoodle, focus, level, reason, wantsChat, myWindow, openSettings }) {
+export default function CircleScreen({ people, pulses, markSeen, nudge, setDoodle, focus, level, reason, wantsChat, myWindow, openSettings, onPicking }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [joined, setJoined] = useState({});
   const [picking, setPicking] = useState(null);
   const pickingFor = picking && people.find((p) => p.id === picking);
+  // Tells App a sheet's open, so the check-in waits its turn.
+  useEffect(() => { onPicking(!!pickingFor); }, [!!pickingFor]);
   const [page, setPage] = useState(0);
   const [width, setWidth] = useState(Dimensions.get("window").width);
   const scroller = useRef(null);

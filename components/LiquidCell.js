@@ -70,9 +70,10 @@ function Bubble({ left, size, delayMs, durationMs }) {
   return <Animated.View style={[{ position: "absolute", left, bottom: 8, width: size, height: size, borderRadius: size / 2, backgroundColor: "rgba(255,255,255,0.55)" }, style]} />;
 }
 
-export default function LiquidCell({ level, onChange, w = CELL_W, h = CELL_H, showNum = true }) {
+export default function LiquidCell({ level, onChange, onDragging, w = CELL_W, h = CELL_H, showNum = true }) {
   const t = useTheme();
   const [dragging, setDragging] = useState(false);
+  useEffect(() => { onDragging?.(dragging); }, [dragging]);
   const c = colorFor(level);
   const inner = h - WALL * 2;
   const fillH = Math.max(0, inner * (level / 100));
