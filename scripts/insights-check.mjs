@@ -24,10 +24,12 @@ const check = (name, ok, detail = "") => results.push({ name, ok: !!ok, detail }
 
 // ----------------------------------------------------------------- printing
 
+// Every sentence an insight would put on screen. vsUsual is already part of
+// its parent's text.
 function texts(v, out = []) {
   if (v && typeof v === "object") {
-    if (typeof v.text === "string") out.push(v.text);
-    for (const [k, x] of Object.entries(v)) if (k !== "text") texts(x, out);
+    for (const k of ["text", "lowText"]) if (typeof v[k] === "string") out.push(v[k]);
+    for (const [k, x] of Object.entries(v)) if (!["text", "lowText", "vsUsual"].includes(k)) texts(x, out);
   }
   return out;
 }

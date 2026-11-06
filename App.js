@@ -35,7 +35,7 @@ import { needsInstall, registerServiceWorker, takeLaunchParams, onNotificationOp
 
 const Tab = createBottomTabNavigator();
 
-const TABS = { you: ["Me", "battery"], circle: ["Circle", "circle"], week: ["Week", "week"] };
+const TABS = { week: ["My Week", "week"], you: ["Me", "battery"], circle: ["Circle", "circle"] };
 
 // Read at module load, once per page load, before anything can re-render.
 const LAUNCH = takeLaunchParams();
@@ -93,7 +93,8 @@ export default function App() {
   const [people, setPeople] = useState([]);
   const [toMe, setToMe] = useState({});
   const [myPulse, setMyPulse] = useState(null);
-  const [log, setLog] = useState([]);
+  // loadHistory's 56 days for My Week, or null until the first load.
+  const [history, setHistory] = useState(null);
   const [pushPerm, setPushPerm] = useState(pushPermission());
   const [focus, setFocus] = useState(LAUNCH.person ? { id: LAUNCH.person } : null);
 
@@ -175,11 +176,11 @@ export default function App() {
   const refresh = useCallback(async () => {
     if (!uid) return;
     try {
-      const [ps, mine, incoming, week] = await Promise.all([api.loadPeople(uid), api.myLatestPulse(uid), api.pulsesToMe(uid), api.weekLog(uid)]);
+      const [ps, mine, incoming, past] = await Promise.all([api.loadPeople(uid), api.myLatestPulse(uid), api.pulsesToMe(uid), api.loadHistory(uid)]);
       setPeople(ps);
       setMyPulse(mine);
       setToMe(incoming);
-      setLog(week);
+      setHistory(past);
     } catch {
       // Keep what's on screen. The next change or foreground tries again.
     }
@@ -219,6 +220,7 @@ export default function App() {
   useEffect(() => {
     checkedInOn.current = null;
     setCheckIn(null);
+    setHistory(null);
     reasonShownAt.current = 0;
     setReasonPrompt(null);
   }, [uid]);
@@ -465,6 +467,9 @@ export default function App() {
       <View style={{ flex: 1 }}>
         <NavigationContainer ref={nav} theme={navTheme}>
           <Tab.Navigator initialRouteName={focus ? "circle" : "you"} tabBar={(props) => <PulseTabBar {...props} />} screenOptions={{ headerShown: false }}>
+            <Tab.Screen name="week">
+              {() => <WeekScreen level={level} history={history} />}
+            </Tab.Screen>
             <Tab.Screen name="you">
               {() => (
                 <YouScreen
@@ -486,9 +491,6 @@ export default function App() {
                   openSettings={() => setSettingsOpen(true)} onPicking={setPickingDoodle}
                 />
               )}
-            </Tab.Screen>
-            <Tab.Screen name="week">
-              {() => <WeekScreen mbti={mbti} level={level} log={log} />}
             </Tab.Screen>
           </Tab.Navigator>
         </NavigationContainer>
