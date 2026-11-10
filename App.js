@@ -468,7 +468,7 @@ export default function App() {
         <NavigationContainer ref={nav} theme={navTheme}>
           <Tab.Navigator initialRouteName={focus ? "circle" : "you"} tabBar={(props) => <PulseTabBar {...props} />} screenOptions={{ headerShown: false }}>
             <Tab.Screen name="week">
-              {() => <WeekScreen level={level} history={history} />}
+              {() => <WeekScreen level={level} history={history} mbti={mbti} />}
             </Tab.Screen>
             <Tab.Screen name="you">
               {() => (
