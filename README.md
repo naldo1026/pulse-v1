@@ -146,7 +146,9 @@ components/
                             that's what opened it.
   ReasonCard.js             "What made this change?" Private chips or up to 3 typed words.
   Icon.js                   Small stroke icon set (react-native-svg).
-  WeekCharts.js             My Week's charts: day bars, gauges and the donut (react-native-svg).
+  WeekCharts.js             My Week's charts: day bars, gauges, donut, compare bars, mini
+                            bars and +/- bars (react-native-svg).
+  Patterns.js               My Week's "Your patterns": 11 cards over the last 4 weeks.
 screens/
   InstallScreen.js          iPhone in Safari: how to add to the home screen.
   SignInScreen.js           Email and password.
