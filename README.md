@@ -32,7 +32,8 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
 - **Pulses:** sending one inserts a row in `pulses`. A trigger works out the recipients from your groups (anyone you haven't sorted counts as Friends) and calls `notify`, which pushes to their phones. Another trigger allows one pulse an hour per person, and the app shows when you can send again.
 - **WhatsApp:** people can add a number in Settings. The Circle shows a "Message on WhatsApp" button with a drafted message when someone's low with "Open to a chat" on, or has an "I'm around" window. Without a number, WhatsApp asks who to send it to.
 - **Doodles:** tap someone on the Circle to give them a doodle instead of their initial. It's your own label for them, stored on your `groupings` row, so only you see it.
-- **Morning check-in:** cron calls `morning` every 5 minutes. It pushes "Morning. How are you feeling?" to anyone whose check-in time just passed, once a day. Tapping it opens the app on the morning prompt.
+- **Morning check-in:** cron calls `morning` every 5 minutes. It pushes "Morning. How are you feeling?" to anyone whose check-in time just passed, once a day. Tapping it opens the app on the morning prompt. On a Monday in the person's own time zone the same push says "Morning. Your week's in." instead, and opens My Week once the check-in's done. The copy lives in `functions/morning/copy.ts`; `node scripts/morning-check.mjs` checks it.
+- **What's new on My Week:** the My Week tab gets a dot when a card has unlocked, a record's been set, a small win's appeared or a pattern's changed, or a new calendar week has started, since My Week was last opened on that phone. Opening it clears the dot, and each card that's new shows a "New" tag for that one visit. What was last seen is kept in the browser (`lib/seen.js`), not the database.
 - **Check-ins:** after your first level of the day, from the morning prompt, a drag or the quiz, at any time of day, the app asks 2 fixed questions and 1 rotating one. Finishing or skipping saves that day's row, and it won't ask again until tomorrow. If the app closes before either, the next level asks again. Turning Morning check-in off only stops the push. Answers belong only to the user, and aren't in the realtime publication. Questions live in `check_in_questions`, so you can edit them in the Supabase dashboard without a deploy. Retire a question with `active` and never reuse its id.
 - **Change reasons:** after a level change of 10 or more that isn't the first of the day, a small card asks "What made this change?", at most once every 30 minutes. One `level_reasons` row is written as soon as it shows, with a null reason, so skipping or closing the app counts as a skip. Like check-in answers, reasons belong only to the user. The chips under "Tell your circle" on the Me tab are the shared ones: those go to `profiles.reason` and into pulses.
 - **Sign-in:** email and password. There's no sign-up in the app. You add people in the Supabase dashboard with a starting password, and they can change it in Settings.
@@ -126,6 +127,7 @@ lib/supabase.js             Supabase client.
 lib/api.js                  Every read and write, mapped to the shapes screens use.
 lib/push.js                 Web push permission and subscription.
 lib/pwa.js                  Install detection, service worker, notification deep links.
+lib/seen.js                 What My Week last showed on this phone, for the tab dot.
 lib/haptics.js              Haptic tick/tap, no-ops on web.
 components/
   primitives.js             Btn, Label, Panel, Chip, Display (bold heading), Segmented,
@@ -165,7 +167,7 @@ App.js                      Gates (install, sign-in, onboarding), app state, sav
 supabase/
   migrations/               Tables, RLS, triggers, cron, realtime. The whole backend.
   functions/notify          Pushes pulses and nudges.
-  functions/morning         Pushes the morning check-in.
+  functions/morning         Pushes the morning check-in ("Your week's in" on Mondays).
   tests/rls_check.sql       Checks other people can't reach your check-ins and reasons.
                             Local stack only; how to run it is at the top of the file.
 public/                     Page template, manifest, service worker (sw.js), icons.

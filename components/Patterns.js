@@ -10,12 +10,24 @@ const signed = (n) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : "0");
 const UP = () => colorFor(75);
 const DOWN = () => colorFor(25);
 
-function Card({ title, note, children, style }) {
+// Which cards are new on this visit to My Week (newsKeys cards). A card
+// shows its "New" tag only for the visit it's new on.
+const NewCards = React.createContext(new Set());
+
+function Card({ id, title, note, children, style }) {
   const t = useTheme();
+  const fresh = React.useContext(NewCards).has(id);
   return (
     <Panel style={[{ marginTop: 12 }, style]}>
       <View style={{ marginBottom: 14 }}>
-        <Label color={t.ink}>{title}</Label>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Label color={t.ink}>{title}</Label>
+          {fresh && (
+            <View style={{ paddingVertical: 2, paddingHorizontal: 8, borderRadius: 100, backgroundColor: colorFor(85) }}>
+              <Text style={{ fontFamily: FONTS.bold, fontSize: 11, color: onColor(colorFor(85)) }}>New</Text>
+            </View>
+          )}
+        </View>
         {note ? <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, marginTop: 2 }}>{note}</Text> : null}
       </View>
       {children}
@@ -44,7 +56,7 @@ function Moves({ data }) {
   if (data.locked) return <Locked title="What moves your battery" hint={data.hint} />;
   const max = Math.max(...data.factors.map((f) => Math.abs(f.diff)), 1);
   return (
-    <Card title="What moves your battery" note="points between answers">
+    <Card id="moves" title="What moves your battery" note="points between answers">
       {data.factors.length ? data.factors.map((f, i) => (
         <View key={f.question} style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9, borderTopWidth: i ? 1 : 0, borderColor: t.line }}>
           <View style={{ flex: 1 }}>
@@ -65,7 +77,7 @@ function Wins({ data }) {
   const t = useTheme();
   if (data.locked || !data.wins.length) return null;
   return (
-    <Card title="Small wins" note="vs the 4 weeks before">
+    <Card id="wins" title="Small wins" note="vs the 4 weeks before">
       <View style={{ flexDirection: "row", gap: 10 }}>
         {data.wins.map((w) => {
           const bounce = w.id === "bounceBack";
@@ -93,7 +105,7 @@ function Records({ data }) {
   const t = useTheme();
   if (data.locked) return <Locked title="Personal records" hint={data.hint} />;
   return (
-    <Card title="Personal records">
+    <Card id="records" title="Personal records">
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {RECORDS.map(([key, label, show]) => {
           const r = data[key];
@@ -121,7 +133,7 @@ function Changes({ data }) {
   if (data.locked || !data.changes.length) return null;
   const name = (c, v) => (c.id === "dipTime" ? PART[v] : c.id === "lowestWeekday" ? v.slice(0, 3) : v);
   return (
-    <Card title="How your patterns have changed" note="vs the 4 weeks before">
+    <Card id="changes" title="How your patterns have changed" note="vs the 4 weeks before">
       {data.changes.map((c, i) => (
         <View key={c.id} style={{ flexDirection: "row", alignItems: "flex-start", paddingVertical: 9, borderTopWidth: i ? 1 : 0, borderColor: t.line }}>
           <Text style={{ width: 84, fontFamily: FONTS.sans, fontSize: T.small, color: t.muted }}>{CHANGE[c.id]}</Text>
@@ -135,10 +147,10 @@ function Changes({ data }) {
   );
 }
 
-function Pair({ title, data, hi, lo, note }) {
+function Pair({ id, title, data, hi, lo, note }) {
   if (data.locked) return <Locked title={title} hint={data.hint} />;
   return (
-    <Card title={title} note={note}>
+    <Card id={id} title={title} note={note}>
       <CompareBars items={[
         { label: hi, value: data.high.avg, sub: `${data.high.answers} days` },
         { label: lo, value: data.low.avg, sub: `${data.low.answers} days` },
@@ -151,7 +163,7 @@ function Rhythm({ data }) {
   if (data.locked) return <Locked title="When you dip" hint={data.hint} />;
   const max = Math.max(...data.byPart.map((p) => p.drops), 1);
   return (
-    <Card title="When you dip" note="drops, last 4 weeks">
+    <Card id="rhythm" title="When you dip" note="drops, last 4 weeks">
       <MiniBars max={max} items={data.byPart.map((p) => ({ label: p.label, value: p.drops, display: String(p.drops), color: DOWN(), on: p.part === data.part }))} />
     </Card>
   );
@@ -163,7 +175,7 @@ const MON_FIRST = [1, 2, 3, 4, 5, 6, 0];
 function Weekdays({ data }) {
   if (data.locked) return <Locked title="Day of the week" hint={data.hint} />;
   return (
-    <Card title="Day of the week" note="average, last 4 weeks">
+    <Card id="weekdays" title="Day of the week" note="average, last 4 weeks">
       <MiniBars max={100} height={72} items={MON_FIRST.map((w) => {
         const d = data.byWeekday[w];
         return { label: WEEKDAYS[w].slice(0, 3), value: d.avg, display: d.avg == null ? "–" : String(d.avg), color: d.avg == null ? null : colorFor(d.avg), on: d.weekday === data.lowest.weekday || d.weekday === data.highest.weekday };
@@ -176,7 +188,7 @@ function Social({ data }) {
   const t = useTheme();
   if (data.locked) return <Locked title="Your social activity" hint={data.hint} />;
   return (
-    <Card title="Your social activity" note="last 4 weeks">
+    <Card id="social" title="Your social activity" note="last 4 weeks">
       <CompareBars items={[
         { label: "Social days", value: data.social.avg, sub: `${data.social.days} days` },
         { label: "Quiet days", value: data.quiet.avg, sub: `${data.quiet.days} days` },
@@ -196,7 +208,7 @@ function Personality({ data }) {
   const t = useTheme();
   if (!data) return null;
   return (
-    <Card title="Your type">
+    <Card id="type" title="Your type">
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View style={{ paddingVertical: 6, paddingHorizontal: 12, borderRadius: 100, backgroundColor: t.sunk }}>
           <Text style={{ fontFamily: FONTS.bold, fontSize: T.small, color: t.ink, letterSpacing: 0.6 }}>{data.type}</Text>
@@ -212,7 +224,7 @@ function Consistency({ data }) {
   if (data.locked) return <Locked title="Logging" hint={data.hint} />;
   const pct = Math.round((data.daysLogged / data.of) * 100);
   return (
-    <Card title="Logging" note={data.of === 28 ? "last 4 weeks" : "since you started"}>
+    <Card id="consistency" title="Logging" note={data.of === 28 ? "last 4 weeks" : "since you started"}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 18 }}>
         <Gauge value={pct} color={UP()} size={96} stroke={10}>
           <Display size={22}>{`${data.daysLogged}/${data.of}`}</Display>
@@ -227,9 +239,10 @@ function Consistency({ data }) {
 }
 
 // "Your patterns": the last 28 days, in the order PUL-15 lists them.
-export default function Patterns({ p }) {
+export default function Patterns({ p, fresh = new Set() }) {
   const t = useTheme();
   return (
+    <NewCards.Provider value={fresh}>
     <View style={{ marginTop: 32 }}>
       <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" }}>
         <Display size={22}>Your patterns</Display>
@@ -239,13 +252,14 @@ export default function Patterns({ p }) {
       <Wins data={p.wins} />
       <Records data={p.records} />
       <Changes data={p.changes} />
-      <Pair title="Sleep" data={p.sleep} hi={`Slept ${p.sleep.high?.label ?? ""}`} lo={`Slept ${p.sleep.low?.label ?? ""}`} note="average that day" />
-      <Pair title="Social hangover" data={p.hangover} hi="After a social day" lo="After a quiet one" note="average next day" />
+      <Pair id="sleep" title="Sleep" data={p.sleep} hi={`Slept ${p.sleep.high?.label ?? ""}`} lo={`Slept ${p.sleep.low?.label ?? ""}`} note="average that day" />
+      <Pair id="hangover" title="Social hangover" data={p.hangover} hi="After a social day" lo="After a quiet one" note="average next day" />
       <Rhythm data={p.rhythm} />
       <Weekdays data={p.weekdays} />
       <Social data={p.social} />
       <Personality data={p.type} />
       <Consistency data={p.consistency} />
     </View>
+    </NewCards.Provider>
   );
 }

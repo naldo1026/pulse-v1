@@ -270,6 +270,34 @@ check("Full: what moves your battery is ranked by size", factors.every((f, i) =>
   check("Full, as an extravert: no personality line (its data leans the other way)", computeInsights({ ...full.data, mbti: "ESTJ" }, full.opts).personalityReflection === null);
 }
 
+// What's new: keys behind the My Week tab dot and "New" tags.
+{
+  const news = (data, now) => insights.newsKeys(prepare(data, { ...full.opts, now }));
+  const later = (h) => new Date(Date.parse(full.opts.now) + h * 3600e3).toISOString();
+  const keysOf = (n) => n.keys.map((k) => k.key).join("|");
+  const base = news(full.data, full.opts.now);
+
+  check("What's new: the week is the calendar week's Monday", base.week === "2026-11-02", base.week);
+  check("What's new: nothing new an hour later with no new data", keysOf(news(full.data, later(1))) === keysOf(base));
+
+  // Sunday 8 Nov → Monday 9 Nov: the week rolls over.
+  const sunday = news(full.data, "2026-11-08T21:00:00Z");
+  const monday = news(full.data, "2026-11-09T07:00:00Z");
+  check("What's new: the week rolls over on Monday", sunday.week === "2026-11-02" && monday.week === "2026-11-09", `${sunday.week} → ${monday.week}`);
+
+  // Only records set this week are keyed, so an old record ageing out can't look new.
+  const recKeys = base.keys.filter((k) => k.card === "records").map((k) => k.key);
+  check("What's new: only this week's records are keyed (the 1h 30m bounce-back)", recKeys.length === 1 && recKeys[0].startsWith("record:bounce:2026-11-04"), recKeys.join(", "));
+
+  // A card unlocking adds a key: the 4-day fixture has no "moves"; the full one does.
+  const cutAt = Date.parse(fx.at(fx.addDays(fx.TODAY, -3), 0, 0, "Europe/London"));
+  const four = { ...full.data, levels: full.data.levels.filter((r) => Date.parse(r.created_at) >= cutAt), reasons: [], checkIns: full.data.checkIns.filter((c) => c.local_date >= fx.addDays(fx.TODAY, -3)) };
+  const fourKeys = news(four, full.opts.now).keys.map((k) => k.key);
+  const added = base.keys.map((k) => k.key).filter((k) => !fourKeys.includes(k));
+  check("What's new: unlocks between the 4-day and full data show up as new keys", ["unlock:moves", "unlock:sleep", "win:average"].every((k) => added.includes(k)), added.join(", "));
+  check("What's new: every key names a My Week card", base.keys.every((k) => ["week", "moves", "wins", "records", "changes", "sleep", "hangover", "rhythm", "weekdays", "social", "type", "consistency"].includes(k.card)));
+}
+
 // ------------------------------------------------------------------- summary
 
 console.log("\n=== Checks\n");
