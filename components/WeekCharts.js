@@ -1,38 +1,36 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import Svg, { Path, Circle, G } from "react-native-svg";
 import { useTheme, FONTS, T } from "../theme";
 import { colorFor } from "../lib/data";
 
 // The week as seven bars, one per day, tall and coloured by that day's
 // average, with the number above. A day before your first level is a stub.
-export function DayBars({ days, lowestDate, height = 120 }) {
+// With onPressDay, each column (bar and letter) opens that day.
+export function DayBars({ days, lowestDate, height = 120, onPressDay }) {
   const t = useTheme();
   return (
-    <View>
-      <View style={{ flexDirection: "row", alignItems: "flex-end", height: height + 22 }}>
-        {days.map((d) => {
-          const low = d.date === lowestDate;
-          return (
-            <View key={d.date} style={{ flex: 1, alignItems: "center" }}>
+    <View style={{ flexDirection: "row" }}>
+      {days.map((d) => {
+        const low = d.date === lowestDate;
+        return (
+          <Pressable
+            key={d.date} disabled={!onPressDay} onPress={() => onPressDay(d.date)}
+            accessibilityRole="button" accessibilityLabel={`${d.weekday}${d.avg == null ? "" : `, average ${d.avg}`}`}
+            style={({ pressed }) => ({ flex: 1, alignItems: "center", opacity: pressed ? 0.6 : 1 })}
+          >
+            <View style={{ height: height + 22, justifyContent: "flex-end", alignItems: "center" }}>
               {d.avg != null && (
                 <Text style={{ fontFamily: low ? FONTS.bold : FONTS.medium, fontSize: T.caption, color: low ? t.ink : t.muted, marginBottom: 6 }}>{d.avg}</Text>
               )}
               <View style={{ width: 22, height: d.avg == null ? 22 : Math.max(22, (d.avg / 100) * height), borderRadius: 11, backgroundColor: d.avg == null ? t.sunk : colorFor(d.avg) }} />
             </View>
-          );
-        })}
-      </View>
-      <View style={{ flexDirection: "row", marginTop: 10 }}>
-        {days.map((d) => {
-          const low = d.date === lowestDate;
-          return (
-            <Text key={d.date} style={{ flex: 1, textAlign: "center", fontFamily: low ? FONTS.medium : FONTS.sans, fontSize: T.caption, color: low ? t.ink : t.faint }}>
+            <Text style={{ marginTop: 10, textAlign: "center", fontFamily: low ? FONTS.medium : FONTS.sans, fontSize: T.caption, color: low ? t.ink : t.faint }}>
               {d.weekday[0]}
             </Text>
-          );
-        })}
-      </View>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

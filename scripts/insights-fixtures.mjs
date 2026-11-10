@@ -164,7 +164,7 @@ export function full({ timeZone = "Europe/London", improving = true, seed = 7 } 
 
     slowBounce = low ? p.bounce : null;
 
-    if (rand() < 0.5) r.data.pulses.push({ created_at: at(date, 12, 30, timeZone) });
+    if (rand() < 0.5) r.data.pulses.push({ created_at: at(date, 12, 30, timeZone), level: r.level, groups: i % 2 ? ["friends"] : ["household", "family", "friends"] });
     if (rand() < 0.3) r.data.nudges.push({ created_at: at(date, 17, 0, timeZone) });
     if (rand() < 0.15) r.data.around.push({ at: at(date, 18, 0, timeZone), until: at(date, 22, 0, timeZone) });
   }

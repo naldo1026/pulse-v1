@@ -187,6 +187,39 @@ check("New York: 1 Nov starts at 04:00 UTC, 2 Nov at 05:00",
   new Date(insights.startOfDay("2026-11-01", "America/New_York")).toISOString() === "2026-11-01T04:00:00.000Z"
   && new Date(insights.startOfDay("2026-11-02", "America/New_York")).toISOString() === "2026-11-02T05:00:00.000Z");
 
+// Day timeline: every level set that day, in order, with the right reason,
+// worked out again here straight from the raw rows.
+for (const [name, f] of [["London", full], ["New York", newYork]]) {
+  const ctx = prepare(f.data, f.opts);
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: f.opts.timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+  const hm = new Intl.DateTimeFormat("en-GB", { timeZone: f.opts.timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const reasonOf = new Map(f.data.reasons.filter((r) => r.reason).map((r) => [r.level_log_id, r.reason]));
+  const sorted = [...f.data.levels].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+  const bad = [];
+  let changes = 0;
+  for (const d of ctx.days) {
+    const tl = insights.dayTimeline(ctx, d.date);
+    const raw = sorted.map((r, i) => ({ r, prev: sorted[i - 1] })).filter(({ r }) => fmt.format(new Date(r.created_at)) === d.date);
+    changes += raw.length;
+    const same = tl.changes.length === raw.length && raw.every(({ r, prev }, i) => {
+      const c = tl.changes[i];
+      return c.id === r.id && c.to === r.level && c.from === (prev ? prev.level : null) && c.reason === (reasonOf.get(r.id) || null) && c.time === hm.format(new Date(r.created_at));
+    });
+    const pulses = f.data.pulses.filter((p) => fmt.format(new Date(p.created_at)) === d.date).length;
+    if (!same || tl.pulses.length !== pulses || tl.empty !== (!raw.length && !ctx.checkIns.has(d.date) && !pulses)) bad.push(d.date);
+  }
+  check(`${name}: each day's timeline lists every level set, in order, with its reason, time and pulses (${changes} levels over 56 days)`, !bad.length, bad.join(", "));
+}
+{
+  const ctx = prepare(full.data, full.opts);
+  const skipped = insights.dayTimeline(ctx, fx.addDays(fx.TODAY, -10));
+  check("A day with nothing logged comes back empty", skipped.empty && !skipped.changes.length && !skipped.checkIn && !skipped.pulses.length);
+  const clock = insights.dayTimeline(ctx, "2026-10-25");
+  check("The clock-change day starts with the 00:30 BST level", clock.changes[0]?.time === "00:30" && clock.changes.at(-1)?.time === "23:30", clock.changes.map((c) => c.time).join(" "));
+  const wed = insights.dayTimeline(ctx, fx.addDays(fx.TODAY, -2));
+  check("Check-in answers carry their option labels", wed.checkIn?.answers.some((a) => a.question === "social_yesterday" && ["Barely saw anyone", "A bit", "A fair amount", "A lot"].includes(a.label)));
+}
+
 // ------------------------------------------------------------------- summary
 
 console.log("\n=== Checks\n");

@@ -139,7 +139,9 @@ components/
   Doodle.js                 One doodle, drawn in chalk.
   DoodlePicker.js           Sheet for choosing someone's doodle.
   PeopleEditor.js           Everyone on Pulse, each with a group picker.
-  Sheet.js                  Bottom sheet used by CheckInSheet, VibeCheckModal and DoodlePicker.
+  Sheet.js                  Bottom sheet used by CheckInSheet, VibeCheckModal, DoodlePicker
+                            and DaySheet. swipeToClose lets a drag on its handle close it.
+  DaySheet.js               My Week: one day's level changes, check-in and pulses.
   CheckInSheet.js           The day's check-in questions, with MorningPrompt first when
                             that's what opened it.
   ReasonCard.js             "What made this change?" Private chips or up to 3 typed words.
