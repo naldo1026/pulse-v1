@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, ActivityIndicator, Pressable } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -27,7 +27,9 @@ import ReasonCard from "./components/ReasonCard";
 import Icon from "./components/Icon";
 import { Btn } from "./components/primitives";
 import { useTheme, FONTS, T } from "./theme";
-import { setRamp } from "./lib/data";
+import { setRamp, colorFor } from "./lib/data";
+import { prepare, newsKeys } from "./lib/insights";
+import { loadSeen, saveSeen } from "./lib/seen";
 import { supabase } from "./lib/supabase";
 import * as api from "./lib/api";
 import { pushPermission, enablePush, refreshPush, forgetDevice } from "./lib/push";
@@ -54,7 +56,8 @@ const morningDue = (time, updatedAt) => {
   return new Date() >= at && new Date().getHours() < 12 && new Date(updatedAt) < at;
 };
 
-function PulseTabBar({ state, navigation }) {
+// dots: tab names that have something new, e.g. { week: true }.
+function PulseTabBar({ state, navigation, dots = {} }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   return (
@@ -67,7 +70,15 @@ function PulseTabBar({ state, navigation }) {
         };
         return (
           <Pressable key={route.key} onPress={onPress} style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}>
-            <Icon name={TABS[route.name][1]} size={22} strokeWidth={isFocused ? 1.9 : 1.6} color={isFocused ? t.ink : t.faint} />
+            <View>
+              <Icon name={TABS[route.name][1]} size={22} strokeWidth={isFocused ? 1.9 : 1.6} color={isFocused ? t.ink : t.faint} />
+              {dots[route.name] && (
+                <View
+                  accessibilityLabel="Something new"
+                  style={{ position: "absolute", top: -2, right: -5, width: 9, height: 9, borderRadius: 5, backgroundColor: colorFor(85), borderWidth: 1.5, borderColor: t.bg }}
+                />
+              )}
+            </View>
             <Text style={{ fontFamily: FONTS.medium, fontSize: 11, marginTop: 3, color: isFocused ? t.ink : t.faint }}>{TABS[route.name][0]}</Text>
           </Pressable>
         );
@@ -341,6 +352,49 @@ export default function App() {
     if (level <= 60 && myWindow) changeWindow(null);
   }, [level]);
 
+  // ------------------------------------------------ what's new on My Week
+
+  // The tab the navigator's on.
+  const [route, setRoute] = useState(focus ? "circle" : "you");
+  const news = useMemo(() => (history ? newsKeys(prepare({ ...history, mbti })) : null), [history, mbti]);
+  // What My Week last showed on this device: { week, keys }.
+  const [seen, setSeen] = useState(null);
+  // Keys that are new on this visit to My Week. Cleared on leaving, so each
+  // "New" tag shows once.
+  const [freshKeys, setFreshKeys] = useState([]);
+  useEffect(() => {
+    setSeen(uid ? loadSeen(uid) : null);
+    setFreshKeys([]);
+  }, [uid]);
+  useEffect(() => {
+    if (!news || !uid) return;
+    const onWeek = route === "week";
+    // Elsewhere, only the very first run on a device saves: it starts from
+    // what's there now, so a new phone doesn't light up with old news.
+    if (!onWeek && seen) return;
+    const all = news.keys.map((k) => k.key);
+    if (onWeek && seen) {
+      const old = new Set(seen.keys);
+      const add = all.filter((k) => !old.has(k));
+      if (add.length) setFreshKeys((f) => [...new Set([...f, ...add])]);
+    }
+    if (seen && seen.week === news.week && all.every((k) => seen.keys.includes(k))) return;
+    const next = { week: news.week, keys: all };
+    saveSeen(uid, next);
+    setSeen(next);
+  }, [news, route, uid, seen]);
+  useEffect(() => {
+    if (route !== "week") setFreshKeys([]);
+  }, [route]);
+  // Something unlocked, a record, a win or a change, or a new week, since My
+  // Week was last opened.
+  const weekDot = route !== "week" && !!news && !!seen
+    && (seen.week !== news.week || news.keys.some((k) => !seen.keys.includes(k.key)));
+  const freshCards = useMemo(
+    () => new Set((news?.keys || []).filter((k) => freshKeys.includes(k.key)).map((k) => k.card)),
+    [news, freshKeys],
+  );
+
   const main = !!me?.onboarded;
   useEffect(() => {
     if (!main || (!LAUNCH.morning && !morningDue(morningTime, me.level_updated_at))) return;
@@ -357,9 +411,25 @@ export default function App() {
   // you're back. It's already saved as a skip, so it can just go.
   useEffect(() => onForeground(() => setReasonPrompt(null)), []);
 
+  // Monday's morning push opens the check-in, then My Week. Once the morning
+  // prompt has been up and both it and the check-in are gone, go there.
+  const weekAfterMorning = useRef(!!LAUNCH.week);
+  const morningShown = useRef(false);
+  useEffect(() => {
+    if (morning) morningShown.current = true;
+    else if (morningShown.current && !checkIn && weekAfterMorning.current && nav.isReady()) {
+      weekAfterMorning.current = false;
+      morningShown.current = false;
+      nav.navigate("week");
+    }
+  }, [morning, checkIn]);
+
   // Notification taps while the app is open.
-  useEffect(() => onNotificationOpen(({ person, morning: m }) => {
-    if (m) setMorning(true);
+  useEffect(() => onNotificationOpen(({ person, morning: m, week }) => {
+    if (m) {
+      weekAfterMorning.current = week;
+      setMorning(true);
+    }
     if (person) {
       setSettingsOpen(false);
       setFocus({ id: person });
@@ -465,10 +535,10 @@ export default function App() {
   } else {
     screen = (
       <View style={{ flex: 1 }}>
-        <NavigationContainer ref={nav} theme={navTheme}>
-          <Tab.Navigator initialRouteName={focus ? "circle" : "you"} tabBar={(props) => <PulseTabBar {...props} />} screenOptions={{ headerShown: false }}>
+        <NavigationContainer ref={nav} theme={navTheme} onStateChange={(s) => s && setRoute(s.routes[s.index].name)}>
+          <Tab.Navigator initialRouteName={focus ? "circle" : "you"} tabBar={(props) => <PulseTabBar {...props} dots={{ week: weekDot }} />} screenOptions={{ headerShown: false }}>
             <Tab.Screen name="week">
-              {() => <WeekScreen level={level} history={history} mbti={mbti} />}
+              {() => <WeekScreen level={level} history={history} mbti={mbti} freshCards={freshCards} />}
             </Tab.Screen>
             <Tab.Screen name="you">
               {() => (

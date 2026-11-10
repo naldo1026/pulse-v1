@@ -118,7 +118,7 @@ function Tags({ title, items, color }) {
   );
 }
 
-export default function WeekScreen({ level, history, mbti }) {
+export default function WeekScreen({ level, history, mbti, freshCards }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const w = useInsights(history, mbti);
@@ -231,7 +231,7 @@ export default function WeekScreen({ level, history, mbti }) {
               </View>
             )}
 
-            <Patterns p={w.patterns} />
+            <Patterns p={w.patterns} fresh={freshCards} />
           </>
         )}
 
