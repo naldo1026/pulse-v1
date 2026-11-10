@@ -144,13 +144,16 @@ components/
                             that's what opened it.
   ReasonCard.js             "What made this change?" Private chips or up to 3 typed words.
   Icon.js                   Small stroke icon set (react-native-svg).
+  WeekChart.js              My Week's chart: each day's average and range over your
+                            usual band (react-native-svg).
 screens/
   InstallScreen.js          iPhone in Safari: how to add to the home screen.
   SignInScreen.js           Email and password.
   OnboardingScreen.js       Welcome, name, level, sort your people, notifications.
   YouScreen.js              Battery, status, reasons / "I'm around", send pulse.
   CircleScreen.js           Ring of people per group (Home, Family, Friends); a list past 5.
-  WeekScreen.js             Last 7 days of your levels and a few plain facts.
+  WeekScreen.js             My Week: headline, week chart, biggest moves, last week,
+                            drains and boosts. All from lib/insights.js.
   SettingsScreen.js         Name, password, people, notifications, colours, morning
                             check-in, personality type, songs, sign out.
 App.js                      Gates (install, sign-in, onboarding), app state, saving,
@@ -170,7 +173,6 @@ assets/icon.svg             App icon source (battery + streak). The PNGs in asse
 ## Still not real
 
 - Spotify isn't built. Settings saves a song per mood but nothing reads it.
-- The personality-type copy on the Week screen is fixed text.
 
 ## Next up
 
