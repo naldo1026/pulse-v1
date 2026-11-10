@@ -16,7 +16,7 @@ process.on("warning", (w) => w.code !== "MODULE_TYPELESS_PACKAGE_JSON" && consol
 
 const insights = await import("../lib/insights.js");
 const fx = await import("./insights-fixtures.mjs");
-const { computeInsights, prepare } = insights;
+const { computeInsights, prepare, THRESHOLDS } = insights;
 
 const json = process.argv.includes("--json");
 const results = [];
@@ -186,6 +186,56 @@ check("London: 25 Oct (25-hour day) starts at 23:00 UTC the day before",
 check("New York: 1 Nov starts at 04:00 UTC, 2 Nov at 05:00",
   new Date(insights.startOfDay("2026-11-01", "America/New_York")).toISOString() === "2026-11-01T04:00:00.000Z"
   && new Date(insights.startOfDay("2026-11-02", "America/New_York")).toISOString() === "2026-11-02T05:00:00.000Z");
+
+// What moves your battery: ranked biggest first, and a question added later
+// in the dashboard joins once it has enough answers on each side.
+const factors = outFull.whatMovesYourBattery.factors;
+check("Full: what moves your battery is ranked by size", factors.every((f, i) => i === 0 || Math.abs(factors[i - 1].diff) >= Math.abs(f.diff)), factors.map((f) => `${f.short} ${f.diff}`).join(", "));
+{
+  const ctx0 = prepare(full.data, full.opts);
+  const median = [...ctx0.days].filter((d) => d.avg != null).map((d) => d.avg).sort((a, b) => a - b)[28];
+  const asked = new Set(full.data.checkIns.filter((_, i) => i % 3 === 0).map((c) => c.local_date));
+  const withNew = (n) => ({
+    ...full.data,
+    questions: [...full.data.questions, { id: "outdoors", kind: "rotating", prompt: "Get outside yesterday?", options: [{ id: "yes", label: "Yes", value: 1 }, { id: "no", label: "No", value: 0 }] }],
+    checkIns: full.data.checkIns.map((c) => {
+      const day = ctx0.days.find((d) => d.date === c.local_date);
+      if (!asked.has(c.local_date) || [...asked].indexOf(c.local_date) >= n) return c;
+      return { ...c, answers: [...c.answers, { question_id: "outdoors", option_id: "x", value: day.avg >= median ? 1 : 0 }] };
+    }),
+  });
+  const few = computeInsights(withNew(3), full.opts).whatMovesYourBattery.factors;
+  const many = computeInsights(withNew(99), full.opts).whatMovesYourBattery.factors;
+  const added = many.find((f) => f.question === "outdoors");
+  check("A new dashboard question stays out of the ranking with too few answers", !few.some((f) => f.question === "outdoors"));
+  check("A new dashboard question joins the ranking once it has enough answers, labelled from its prompt",
+    added && added.short === "Get outside yesterday? Yes" && added.vs === "No", added && `${added.short} vs ${added.vs}: ${added.diff}`);
+}
+
+// The personality line only appears when the data backs it.
+{
+  const supported = (out) => {
+    const r = out.personalityReflection;
+    if (!r) return true;
+    const inward = r.type[0] === "I";
+    const way = (d) => (inward ? -d : d) >= THRESHOLDS.factorDiff;
+    if (r.basis === "socialActivity") return way(out.socialActivity.diff);
+    if (r.basis === "socialYesterday") return way(out.socialYesterday.diff);
+    if (r.basis === "topBoost") return (inward ? ["alone time", "rest"] : ["good chat", "plans"]).includes(out.drainsAndBoosts.boosts[0].reason.toLowerCase());
+    return false;
+  };
+  let shown = 0;
+  const bad = [];
+  for (const [name, f] of [["full", full], ["declining", declining], ["sparse", fx.sparse()], ["oneDay", fx.oneDay()], ["newYork", newYork]]) {
+    for (const mbti of ["INFP", "ISTJ", "ENFP", "ESTJ"]) {
+      const out = computeInsights({ ...f.data, mbti }, f.opts);
+      if (out.personalityReflection) shown++;
+      if (!supported(out)) bad.push(`${name}/${mbti}`);
+    }
+  }
+  check(`Personality line only when the data backs it (${shown} of 20 shown)`, !bad.length && shown > 0, bad.join(", "));
+  check("Full, as an extravert: no personality line (its data leans the other way)", computeInsights({ ...full.data, mbti: "ESTJ" }, full.opts).personalityReflection === null);
+}
 
 // ------------------------------------------------------------------- summary
 

@@ -5,11 +5,14 @@ import { useTheme, FONTS, T } from "../theme";
 import { colorFor } from "../lib/data";
 import {
   prepare, thisWeek, weekComparison, biggestMoves, drainsAndBoosts, thisWeekDays, weekMoods, sawPeople, personalityLink, firstDay,
+  whatMovesYourBattery, smallWins, records, patternChanges, sleepVsBattery, socialYesterdayVsToday, dailyRhythm, dayOfWeek,
+  socialActivity, personalityReflection, consistency,
   WEEKDAYS, THRESHOLDS, LOW,
 } from "../lib/insights";
 import { Label, Panel, Display } from "../components/primitives";
 import LightStreak from "../components/LightStreak";
 import { DayBars, Gauge, Donut } from "../components/WeekCharts";
+import Patterns from "../components/Patterns";
 
 // A local calendar date, at noon so no time zone can move it to another day.
 const asDate = (date) => new Date(`${date}T12:00:00`);
@@ -44,6 +47,19 @@ function useInsights(history, mbti) {
       people: sawPeople(ctx),
       type: personalityLink(ctx),
       first: firstDay(ctx),
+      patterns: {
+        moves: whatMovesYourBattery(ctx),
+        wins: smallWins(ctx),
+        records: records(ctx),
+        changes: patternChanges(ctx),
+        sleep: sleepVsBattery(ctx),
+        hangover: socialYesterdayVsToday(ctx),
+        rhythm: dailyRhythm(ctx),
+        weekdays: dayOfWeek(ctx),
+        social: socialActivity(ctx),
+        type: personalityReflection(ctx),
+        consistency: consistency(ctx),
+      },
     };
   }, [history, mbti]);
 }
@@ -214,6 +230,8 @@ export default function WeekScreen({ level, history, mbti }) {
                 <Tags title="Boosts" items={tags.boosts} color={colorFor(70)} />
               </View>
             )}
+
+            <Patterns p={w.patterns} />
           </>
         )}
 
