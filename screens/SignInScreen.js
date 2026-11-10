@@ -5,6 +5,7 @@ import { useTheme, FONTS, T } from "../theme";
 import { supabase } from "../lib/supabase";
 import { Btn, Display } from "../components/primitives";
 import LightStreak from "../components/LightStreak";
+import { LegalLinks } from "../components/LegalModal";
 
 // What went wrong, in words. Codes first, then messages for older servers.
 function problem(error, creating) {
@@ -96,6 +97,7 @@ export default function SignInScreen() {
             Forgot your password? Tell whoever sent you Pulse.
           </Text>
         )}
+        <LegalLinks style={{ marginTop: 14 }} />
       </View>
     </View>
   );
