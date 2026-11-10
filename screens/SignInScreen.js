@@ -5,6 +5,7 @@ import { useTheme, FONTS, T } from "../theme";
 import { supabase } from "../lib/supabase";
 import { Btn, Display } from "../components/primitives";
 import LightStreak from "../components/LightStreak";
+import { LegalLinks } from "../components/LegalModal";
 
 // Email and password. Nobody can sign up here: people are added in the
 // Supabase dashboard with a starting password, which they can change in
@@ -61,6 +62,7 @@ export default function SignInScreen() {
         <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.faint, textAlign: "center", marginTop: 16 }}>
           Forgot it? Ask whoever added you to reset it.
         </Text>
+        <LegalLinks style={{ marginTop: 14 }} />
       </View>
     </View>
   );

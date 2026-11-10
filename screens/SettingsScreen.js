@@ -6,6 +6,13 @@ import { MBTI, DONT_KNOW, TYPE_TEST_URL, THEMES, LIBRARY, stopsFor } from "../li
 import { Btn, Label, Panel, Display, Segmented, Toggle } from "../components/primitives";
 import PeopleEditor from "../components/PeopleEditor";
 import Icon from "../components/Icon";
+import LegalDoc from "../components/LegalDoc";
+import ABOUT from "../lib/legal/about";
+import PRIVACY from "../lib/legal/privacy";
+import TERMS from "../lib/legal/terms";
+
+const TABS = [["settings", "Settings"], ["about", "About"], ["privacy", "Privacy"], ["terms", "Terms"]];
+const DOCS = { about: ABOUT, privacy: PRIVACY, terms: TERMS };
 
 const TIMES = [["07:00", "7:00"], ["07:40", "7:40"], ["08:30", "8:30"], ["off", "Off"]];
 const MOODS = [["low", "When you're low"], ["mid", "In between"], ["high", "When you're full"]];
@@ -46,6 +53,7 @@ export default function SettingsScreen({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const [tab, setTab] = useState("settings");
   const [openMood, setOpenMood] = useState(null);
   const [draft, setDraft] = useState(name);
   const saveName = () => {
@@ -83,7 +91,9 @@ export default function SettingsScreen({
             <Text style={{ fontFamily: FONTS.medium, fontSize: T.body, color: t.ink }}>Done</Text>
           </Pressable>
         </View>
+        <Segmented options={TABS} value={tab} onChange={setTab} style={{ marginHorizontal: 24, marginTop: 16 }} />
 
+        {tab !== "settings" ? <LegalDoc key={tab} doc={DOCS[tab]} contents={tab !== "about"} /> : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
           <Section title="Your name">
             <TextInput
@@ -222,6 +232,7 @@ export default function SettingsScreen({
             Only people on Pulse see your level.
           </Text>
         </ScrollView>
+        )}
       </View>
     </Modal>
   );
