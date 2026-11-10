@@ -1,15 +1,15 @@
 import React, { useMemo } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme, rgba, FONTS, T } from "../theme";
+import { useTheme, FONTS, T } from "../theme";
 import { colorFor } from "../lib/data";
 import {
-  prepare, thisWeek, headline, biggestMoves, weekComparison, drainsAndBoosts, thisWeekDays, baseline, firstDay,
-  addDays, THRESHOLDS, LOW,
+  prepare, thisWeek, weekComparison, biggestMoves, drainsAndBoosts, thisWeekDays, weekMoods, sawPeople, personalityLink, firstDay,
+  WEEKDAYS, THRESHOLDS, LOW,
 } from "../lib/insights";
 import { Label, Panel, Display } from "../components/primitives";
 import LightStreak from "../components/LightStreak";
-import WeekChart from "../components/WeekChart";
+import { DayBars, Gauge, Donut } from "../components/WeekCharts";
 
 // A local calendar date, at noon so no time zone can move it to another day.
 const asDate = (date) => new Date(`${date}T12:00:00`);
@@ -23,92 +23,94 @@ function dateRange(from, to) {
     : `${short(from, { day: "numeric", month: "short" })} – ${short(to, { day: "numeric", month: "short" })}`;
 }
 
+// Each state's colour: the middle of its band on your colour ramp.
+const MOOD_LEVEL = { drained: 10, low: 30, okay: 50, good: 70, full: 90 };
+
 // Everything on this screen, worked out from the 56 days App loads.
-function useInsights(history) {
+function useInsights(history, mbti) {
   return useMemo(() => {
     if (!history) return null;
-    const ctx = prepare(history);
-    const usual = baseline(ctx);
+    const ctx = prepare({ ...history, mbti });
+    const days = thisWeekDays(ctx);
     return {
       today: ctx.today,
+      bars: days.map((d) => ({ date: d.date, weekday: WEEKDAYS[d.weekday], avg: d.avg == null ? null : Math.round(d.avg) })),
+      logged: days.filter((d) => d.logged).length,
       week: thisWeek(ctx),
-      headline: headline(ctx),
-      moves: biggestMoves(ctx),
       compare: weekComparison(ctx),
-      tags: drainsAndBoosts(ctx, thisWeekDays(ctx)),
-      usual: usual.locked ? null : usual,
+      moves: biggestMoves(ctx),
+      tags: drainsAndBoosts(ctx, days),
+      moods: weekMoods(ctx),
+      people: sawPeople(ctx),
+      type: personalityLink(ctx),
       first: firstDay(ctx),
-      days: thisWeekDays(ctx),
     };
-  }, [history]);
+  }, [history, mbti]);
 }
 
-function Section({ title, children }) {
+function Pill({ children, color }) {
+  const t = useTheme();
   return (
-    <View style={{ marginTop: 28 }}>
-      <Label style={{ marginLeft: 4, marginBottom: 8 }}>{title}</Label>
-      {children}
+    <View style={{ paddingVertical: 4, paddingHorizontal: 10, borderRadius: 100, backgroundColor: color || t.sunk }}>
+      <Text style={{ fontFamily: FONTS.medium, fontSize: T.caption, color: t.ink }}>{children}</Text>
     </View>
   );
 }
 
-// What's still to come, as progress rather than a gap.
-function Hint({ children }) {
-  const t = useTheme();
-  return <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.faint, marginHorizontal: 4 }}>{children}</Text>;
-}
-
-// A big figure with a line or two beside it.
-function Row({ big, color, first, children }) {
+// One of the three gauges, with your type's badge on the one it speaks to.
+function Meter({ label, value, big, unit, color, badge }) {
   const t = useTheme();
   return (
-    <View style={{ flexDirection: "row", alignItems: "baseline", gap: 12, paddingVertical: 14, borderTopWidth: first ? 0 : 1, borderColor: t.line }}>
-      <Display size={26} color={color} style={{ minWidth: 52 }}>{big}</Display>
-      <View style={{ flex: 1 }}>{children}</View>
+    <View style={{ flex: 1, alignItems: "center" }}>
+      <View style={{ height: 22, justifyContent: "center" }}>{badge && <Pill>{badge}</Pill>}</View>
+      <Gauge value={value} color={color} size={70} stroke={8}>
+        <Display size={20}>{big}</Display>
+      </Gauge>
+      <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.ink, marginTop: 8, textAlign: "center" }}>{label}</Text>
+      <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, marginTop: 1, textAlign: "center" }}>{unit}</Text>
     </View>
   );
 }
 
-function Line({ children, muted }) {
+function Tile({ big, label, sub, color }) {
   const t = useTheme();
-  return <Text style={{ fontFamily: FONTS.sans, fontSize: muted ? T.small : T.body, lineHeight: muted ? 18 : 21, color: muted ? t.muted : t.ink, marginTop: muted ? 2 : 0 }}>{children}</Text>;
-}
-
-function Move({ move, what, today, first }) {
-  const when = move.date === today ? "today" : move.date === addDays(today, -1) ? "yesterday" : `on ${move.weekday}`;
   return (
-    <Row big={signed(move.change)} first={first}>
-      <Line>{`Biggest ${what}: ${move.from} → ${move.to} ${when}`}</Line>
-      {move.reason && <Line muted>{`Tagged “${move.reason}”`}</Line>}
-      {move.vsUsual && <Line muted>{`That day averaged ${move.dayAvg}, ${move.vsUsual.text}`}</Line>}
-    </Row>
+    <Panel style={{ flexGrow: 1, flexBasis: "45%", padding: 16 }}>
+      <Display size={28} color={color}>{big}</Display>
+      <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.ink, marginTop: 4 }}>{label}</Text>
+      {sub ? <Text numberOfLines={1} style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, marginTop: 2 }}>{sub}</Text> : null}
+    </Panel>
   );
 }
 
-function Tags({ title, items, what, empty }) {
+function Tags({ title, items, color }) {
   const t = useTheme();
+  if (!items.length) return null;
   return (
-    <View style={{ flex: 1, minWidth: 220 }}>
-      <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.muted, marginBottom: 6 }}>{title}</Text>
-      {items.length ? items.map((g) => (
-        <View key={g.reason} style={{ paddingVertical: 8 }}>
-          <Line>{`“${g.reason}”`}</Line>
-          <Line muted>{`${g.count} ${what}, ${g.avgChange} points on average`}</Line>
+    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 6, marginTop: 10 }}>
+      <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.muted, width: 52, paddingTop: 7 }}>{title}</Text>
+      <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+      {items.map((g) => (
+        <View key={g.reason} style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 100, borderWidth: 1, borderColor: t.line, backgroundColor: t.surface }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.ink }}>{g.reason}</Text>
+          <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.faint }}>{`×${g.count}`}</Text>
         </View>
-      )) : <Line muted>{empty}</Line>}
+      ))}
+      </View>
     </View>
   );
 }
 
-export default function WeekScreen({ level, history }) {
+export default function WeekScreen({ level, history, mbti }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const w = useInsights(history);
+  const w = useInsights(history, mbti);
 
   const header = (
     <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingTop: insets.top + 8, paddingHorizontal: 24 }}>
       <Display size={24}>My Week</Display>
-      {w && <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.faint }}>{dateRange(w.days[0].date, w.today)}</Text>}
+      {w && <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.faint }}>{dateRange(w.bars[0].date, w.today)}</Text>}
     </View>
   );
 
@@ -122,101 +124,100 @@ export default function WeekScreen({ level, history }) {
     );
   }
 
-  const { week, moves, compare, tags } = w;
+  const { week, compare, moves, tags, moods, people, type } = w;
   const open = !week.locked;
-  const loggedDays = w.days.filter((d) => d.logged).length;
+  const need = THRESHOLDS.weekDays - Math.min(w.logged, THRESHOLDS.weekDays);
+  // Before the week unlocks: the average of the days that have a level.
+  const known = w.bars.filter((d) => d.avg != null);
+  const soFar = known.length ? Math.round(known.reduce((a, d) => a + d.avg, 0) / known.length) : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       <LightStreak level={level} intensity={0.8} />
       {header}
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 28, paddingBottom: insets.bottom + 32 }}>
-        {open ? (
-          <>
-            <Display size={30}>{w.headline.text}</Display>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: insets.bottom + 32 }}>
+        {/* The week, day by day. */}
+        <Panel style={{ paddingBottom: 16 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
+            <View>
+              <Display size={44}>{open ? String(week.average) : soFar == null ? "–" : String(soFar)}</Display>
+              <Label style={{ marginTop: 2 }}>{open ? "Average this week" : soFar == null ? "No levels yet" : "Average so far"}</Label>
+            </View>
+            {open && !compare.locked && compare.pct != null && <Pill>{`${signed(compare.pct)}% vs last week`}</Pill>}
+            {!open && <Pill>{`${Math.min(w.logged, THRESHOLDS.weekDays)} of ${THRESHOLDS.weekDays} days`}</Pill>}
+          </View>
+          <DayBars days={w.bars} lowestDate={open ? week.lowest.date : null} />
+        </Panel>
 
-            <Panel style={{ marginTop: 24, paddingBottom: 16 }}>
-              <WeekChart days={week.days} usual={w.usual?.overall} lowestDate={week.lowest.date} />
-              <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 6, marginTop: 14 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colorFor(week.average) }} />
-                  <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.muted }}>Daily average and range</Text>
-                </View>
-                {w.usual && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <View style={{ width: 14, height: 10, borderRadius: 3, backgroundColor: rgba(t.ink, t.scheme === "dark" ? 0.14 : 0.1) }} />
-                    <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.muted }}>{`Your usual, ${w.usual.overall.low}–${w.usual.overall.high}`}</Text>
-                  </View>
-                )}
-              </View>
-            </Panel>
-            {!w.usual && <View style={{ marginTop: 8 }}><Hint>{`Your usual range shows here after ${THRESHOLDS.baselineDays} days of levels.`}</Hint></View>}
-          </>
-        ) : (
-          <>
-            <Display size={30}>{w.first ? w.first.text : "Your week starts with your first level."}</Display>
-            <Panel style={{ marginTop: 24 }}>
-              <Label>Your week</Label>
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
-                {[...Array(THRESHOLDS.weekDays)].map((_, i) => (
-                  <View key={i} style={{ flex: 1, height: 8, borderRadius: 4, backgroundColor: i < loggedDays ? colorFor(level) : t.sunk }} />
-                ))}
-              </View>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, lineHeight: 21, color: t.ink, marginTop: 14 }}>
-                {`${week.hint[0].toUpperCase()}${week.hint.slice(1)}.`}
-              </Text>
-              <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.muted, marginTop: 4 }}>
-                Set it on Me whenever it changes. Any days this week count.
-              </Text>
-            </Panel>
-          </>
-        )}
-
-        {(open || !moves.locked) && (
-          <Section title="Biggest moves">
-            {moves.locked ? <Hint>{`${moves.hint}.`}</Hint> : (
-              <Panel style={{ paddingVertical: 4 }}>
-                {moves.drop && <Move move={moves.drop} what="drop" today={w.today} first />}
-                {moves.recharge && <Move move={moves.recharge} what="recharge" today={w.today} first={!moves.drop} />}
-              </Panel>
-            )}
-          </Section>
+        {!open && (
+          <View style={{ marginTop: 24 }}>
+            {w.first && <Display size={22}>{w.first.text}</Display>}
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.body, color: t.muted, marginTop: 8 }}>
+              {w.first ? `${need} more ${need === 1 ? "day" : "days"} of levels to unlock your week.` : "Set your level on Me to start your week."}
+            </Text>
+          </View>
         )}
 
         {open && (
-          <Section title="Compared with last week">
-            {compare.locked ? <Hint>{`${compare.hint[0].toUpperCase()}${compare.hint.slice(1)}.`}</Hint> : (
-              <Panel style={{ paddingVertical: 4 }}>
-                <Row big={compare.pct == null ? signed(compare.diff) : `${signed(compare.pct)}%`} first>
-                  <Line>Average</Line>
-                  <Line muted>{`${compare.lastWeek} last week, ${compare.thisWeek} this week`}</Line>
-                </Row>
-                <Row big={String(compare.lowDays.thisWeek)}>
-                  <Line>{compare.lowDays.thisWeek === 1 ? "Low day" : "Low days"}</Line>
-                  <Line muted>{`${compare.lowDays.lastWeek} last week. A low day averages ${LOW} or under.`}</Line>
-                </Row>
-              </Panel>
-            )}
-          </Section>
-        )}
+          <>
+            {/* How you were: three gauges, with your type's link. */}
+            <Panel style={{ marginTop: 14, paddingHorizontal: 12 }}>
+              <View style={{ flexDirection: "row" }}>
+                <Meter
+                  label="Saw people" color={colorFor(90)} badge={type?.focus === "people" ? type.type : null}
+                  value={people.locked ? null : people.pct} big={people.locked ? "–" : `${people.days}/${people.of}`}
+                  unit={people.locked ? "check in to see" : "days"}
+                />
+                <Meter label="Alone time" color={colorFor(30)} badge={type?.focus === "alone" ? type.type : null} value={moods.alone} big={`${moods.alone}%`} unit="of your week" />
+                <Meter label="Up for chill" color={colorFor(70)} value={moods.chill} big={`${moods.chill}%`} unit="of your week" />
+              </View>
+              {type && (
+                <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.muted, marginTop: 14, marginHorizontal: 8, textAlign: "center" }}>
+                  {type.text}
+                </Text>
+              )}
+            </Panel>
 
-        {open && (
-          <Section title="Drains and boosts">
-            {tags.locked ? <Hint>{`${tags.hint[0].toUpperCase()}${tags.hint.slice(1)}. Tag a change when Pulse asks what made it.`}</Hint> : (
-              <Panel>
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 16 }}>
-                  <Tags title="What drained you" items={tags.drains} what="drops" empty="No tag has come up twice on a drop this week." />
-                  <Tags title="What boosted you" items={tags.boosts} what="recharges" empty="No tag has come up twice on a recharge this week." />
+            {/* Where the week's hours went. */}
+            <Panel style={{ marginTop: 14 }}>
+              <Label>How your week felt</Label>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 20, marginTop: 14 }}>
+                <Donut segments={moods.bands.map((b) => ({ id: b.id, pct: b.pct, color: colorFor(MOOD_LEVEL[b.id]) }))}>
+                  <Display size={22}>{`${moods.bands.find((b) => b.id === moods.top).pct}%`}</Display>
+                  <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.muted }}>{moods.bands.find((b) => b.id === moods.top).label}</Text>
+                </Donut>
+                <View style={{ flex: 1, gap: 6 }}>
+                  {[...moods.bands].reverse().map((b) => (
+                    <View key={b.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, opacity: b.pct ? 1 : 0.45 }}>
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colorFor(MOOD_LEVEL[b.id]) }} />
+                      <Text style={{ flex: 1, fontFamily: FONTS.sans, fontSize: T.small, color: t.ink }}>{b.label}</Text>
+                      <Text style={{ fontFamily: FONTS.medium, fontSize: T.small, color: t.ink }}>{`${b.pct}%`}</Text>
+                    </View>
+                  ))}
                 </View>
-              </Panel>
+              </View>
+            </Panel>
+
+            {/* The week in four numbers. */}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
+              <Tile big={moves.drop ? signed(moves.drop.change) : "0"} label="Biggest drop" sub={moves.drop?.reason || (moves.drop ? `${moves.drop.weekday}` : "None this week")} />
+              <Tile big={moves.recharge ? signed(moves.recharge.change) : "0"} label="Biggest recharge" sub={moves.recharge?.reason || (moves.recharge ? `${moves.recharge.weekday}` : "None this week")} />
+              <Tile big={compare.locked ? String(week.days.filter((d) => d.avg != null && d.avg <= LOW).length) : String(compare.lowDays.thisWeek)} label="Low days" sub={compare.locked ? null : `${compare.lowDays.lastWeek} last week`} />
+              <Tile big={`${w.logged}/7`} label="Days logged" />
+            </View>
+
+            {/* Tags you gave, counted. */}
+            {!tags.locked && (tags.drains.length > 0 || tags.boosts.length > 0) && (
+              <View style={{ marginTop: 14 }}>
+                <Tags title="Drains" items={tags.drains} color={colorFor(30)} />
+                <Tags title="Boosts" items={tags.boosts} color={colorFor(70)} />
+              </View>
             )}
-          </Section>
+          </>
         )}
 
-        <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 28 }}>
-          Only you see this. It's built from the levels and tags you've set.
-        </Text>
+        <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 28 }}>Only you see this.</Text>
       </ScrollView>
     </View>
   );

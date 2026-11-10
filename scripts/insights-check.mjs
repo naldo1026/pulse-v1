@@ -53,6 +53,18 @@ function show(key, v) {
     }
     return;
   }
+  if (key === "weekMoods") {
+    console.log(`${pad}${v.bands.map((b) => `${b.label} ${b.pct}% (${b.hours}h)`).join(", ")}. Alone ${v.alone}%, chill ${v.chill}%.`);
+    return;
+  }
+  if (key === "sawPeople") {
+    console.log(`${pad}${v.days} of ${v.of} days (${v.pct}%): ${v.answers.map((a) => `${a.date} ${a.value}`).join(", ")}`);
+    return;
+  }
+  if (key === "personalityLink") {
+    console.log(`${pad}${v.type}, focus ${v.focus}: ${v.text}`);
+    return;
+  }
   if (key === "baseline") {
     const days = v.byWeekday.map((r, i) => (r ? `${insights.WEEKDAYS[i].slice(0, 3)} ${r.low}–${r.high}` : null)).filter(Boolean);
     console.log(`${pad}${v.text}${days.length ? ` By weekday: ${days.join(", ")}` : ""}`);
@@ -151,6 +163,29 @@ const late = ctx.levels.find((l) => l.id === full.marks.gmtLate.id);
 check("London: 23:30 GMT on 25 Oct, the 25-hour day, counts on the 25th", late.date === "2026-10-25" && late.hour === 23);
 const drop = ctx.changes.find((c) => c.id === full.marks.afterChangeDrop.id);
 check("London: the 14:00 drop the day after the change is at hour 14", drop?.hour === 14, `hour ${drop?.hour}`);
+
+// Week at a glance: the states cover the whole week, and the gauges are
+// slices of them.
+for (const [name, out] of [["Full", outFull], ["Getting worse", outDeclining], ["New York", outNewYork]]) {
+  const m = out.weekMoods;
+  const sum = m.bands.reduce((a, b) => a + b.pct, 0);
+  const pick = (ids) => m.bands.filter((b) => ids.includes(b.id)).reduce((a, b) => a + b.pct, 0);
+  check(`${name}: week states add up to 100%, and alone/chill are their slices`, sum === 100 && m.alone === pick(["drained", "low"]) && m.chill === pick(["good"]), `sum ${sum}`);
+  const hours = m.bands.reduce((a, b) => a + b.hours, 0);
+  check(`${name}: week states cover the 7 days up to now (about 166h)`, Math.abs(hours - 166) <= 3, `${hours}h`);
+}
+check("Sparse and first day: week states stay locked under 3 days", outSparse.weekMoods.locked && outOne.weekMoods.locked);
+const saw = outFull.sawPeople;
+check("Full: saw people counts answers of 2 or more", saw.days === saw.answers.filter((a) => a.value >= 2).length && saw.of === saw.answers.length);
+check("Full (INFP): personality links to alone time", outFull.personalityLink?.focus === "alone" && outFull.personalityLink.text.includes(`${outFull.weekMoods.alone}%`));
+check("First day (ESTP): personality links to seeing people", outOne.personalityLink?.focus === "people", outOne.personalityLink?.text);
+check("Sparse (no type): no personality line", outSparse.personalityLink === null);
+check("London: 25 Oct (25-hour day) starts at 23:00 UTC the day before",
+  new Date(insights.startOfDay("2026-10-25", "Europe/London")).toISOString() === "2026-10-24T23:00:00.000Z"
+  && new Date(insights.startOfDay("2026-10-26", "Europe/London")).toISOString() === "2026-10-26T00:00:00.000Z");
+check("New York: 1 Nov starts at 04:00 UTC, 2 Nov at 05:00",
+  new Date(insights.startOfDay("2026-11-01", "America/New_York")).toISOString() === "2026-11-01T04:00:00.000Z"
+  && new Date(insights.startOfDay("2026-11-02", "America/New_York")).toISOString() === "2026-11-02T05:00:00.000Z");
 
 // ------------------------------------------------------------------- summary
 
