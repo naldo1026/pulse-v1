@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, FONTS, T } from "../theme";
@@ -6,9 +6,10 @@ import { colorFor } from "../lib/data";
 import {
   prepare, thisWeek, weekComparison, biggestMoves, drainsAndBoosts, thisWeekDays, weekMoods, sawPeople, personalityLink, firstDay,
   whatMovesYourBattery, smallWins, records, patternChanges, sleepVsBattery, socialYesterdayVsToday, dailyRhythm, dayOfWeek,
-  socialActivity, personalityReflection, consistency,
+  socialActivity, personalityReflection, consistency, dayTimeline,
   WEEKDAYS, THRESHOLDS, LOW,
 } from "../lib/insights";
+import DaySheet from "../components/DaySheet";
 import { Label, Panel, Display } from "../components/primitives";
 import LightStreak from "../components/LightStreak";
 import { DayBars, Gauge, Donut } from "../components/WeekCharts";
@@ -36,6 +37,7 @@ function useInsights(history, mbti) {
     const ctx = prepare({ ...history, mbti });
     const days = thisWeekDays(ctx);
     return {
+      ctx,
       today: ctx.today,
       bars: days.map((d) => ({ date: d.date, weekday: WEEKDAYS[d.weekday], avg: d.avg == null ? null : Math.round(d.avg) })),
       logged: days.filter((d) => d.logged).length,
@@ -122,6 +124,8 @@ export default function WeekScreen({ level, history, mbti }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const w = useInsights(history, mbti);
+  // The date whose timeline sheet is open, or null.
+  const [openDay, setOpenDay] = useState(null);
 
   const header = (
     <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingTop: insets.top + 8, paddingHorizontal: 24 }}>
@@ -163,7 +167,8 @@ export default function WeekScreen({ level, history, mbti }) {
             {open && !compare.locked && compare.pct != null && <Pill>{`${signed(compare.pct)}% vs last week`}</Pill>}
             {!open && <Pill>{`${Math.min(w.logged, THRESHOLDS.weekDays)} of ${THRESHOLDS.weekDays} days`}</Pill>}
           </View>
-          <DayBars days={w.bars} lowestDate={open ? week.lowest.date : null} />
+          <DayBars days={w.bars} lowestDate={open ? week.lowest.date : null} onPressDay={setOpenDay} />
+          <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 12 }}>Tap a day to see what happened</Text>
         </Panel>
 
         {!open && (
@@ -237,6 +242,8 @@ export default function WeekScreen({ level, history, mbti }) {
 
         <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 28 }}>Only you see this.</Text>
       </ScrollView>
+
+      {openDay && <DaySheet day={dayTimeline(w.ctx, openDay)} today={w.today} onDismiss={() => setOpenDay(null)} />}
     </View>
   );
 }
