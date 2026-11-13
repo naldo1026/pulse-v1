@@ -1,6 +1,15 @@
 # Supabase CLI config. Only what Pulse needs; the CLI fills in the rest.
 project_id = "pulse"
 
+# Anyone can make an account in the app, and there's no confirmation email
+# because Pulse sends none. Matches the live project's dashboard settings
+# (README, Going live), so the local stack behaves the same.
+[auth]
+enable_signup = true
+
+[auth.email]
+enable_confirmations = false
+
 # Both functions are called by the database with a shared secret header
 # (x-pulse-secret), not a user JWT.
 [functions.notify]

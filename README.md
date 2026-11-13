@@ -37,7 +37,7 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
 - **What's new on My Week:** the My Week tab gets a dot when a card has unlocked, a record's been set, a small win's appeared or a pattern's changed, or a new calendar week has started, since My Week was last opened on that phone. Opening it clears the dot, and each card that's new shows a "New" tag for that one visit. What was last seen is kept in the browser (`lib/seen.js`), not the database.
 - **Check-ins:** after your first level of the day, from the morning prompt, a drag or the quiz, at any time of day, the app asks 2 fixed questions and 1 rotating one. Finishing or skipping saves that day's row, and it won't ask again until tomorrow. If the app closes before either, the next level asks again. Turning Morning check-in off only stops the push. Answers belong only to the user, and aren't in the realtime publication. Questions live in `check_in_questions`, so you can edit them in the Supabase dashboard without a deploy. Retire a question with `active` and never reuse its id.
 - **Change reasons:** after a level change of 10 or more that isn't the first of the day, a small card asks "What made this change?", at most once every 30 minutes. One `level_reasons` row is written as soon as it shows, with a null reason, so skipping or closing the app counts as a skip. Like check-in answers, reasons belong only to the user. The chips under "Tell your circle" on the Me tab are the shared ones: those go to `profiles.reason` and into pulses.
-- **Sign-in:** email and password. There's no sign-up in the app. You add people in the Supabase dashboard with a starting password, and they can change it in Settings.
+- **Sign-in:** email and password. Anyone with the link can create an account on the sign-in screen. There's no confirmation email, since Pulse sends none, so a new account signs straight in and goes to onboarding. A new account sees nobody until someone accepts them, and nobody sees them. Passwords can be changed in Settings; a forgotten one is reset by hand (below).
 
 **iPhone limits:**
 - Push needs iOS 16.4 or later, and Pulse has to be opened from the home screen. It also has to be signed into there: Safari and the home-screen app don't share sign-ins.
@@ -49,7 +49,7 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
 
 Create a project at supabase.com (free tier is fine). Save the database password; `supabase link` asks for it. Then, in the dashboard:
 
-- **Authentication > Sign In / Providers:** turn off **Allow new users to sign up**. Leave the Email provider on.
+- **Authentication > Sign In / Providers:** turn on **Allow new users to sign up**. Leave the Email provider on, and turn off **Confirm email** inside it.
 
 No email setup is needed. Pulse never sends email.
 
@@ -96,18 +96,15 @@ Until those two secrets exist, everything works except push.
 - Every push to `main` deploys.
 - Set Supabase **Authentication > URL Configuration > Site URL** to the Vercel URL.
 
-## Adding a tester
+## Inviting someone
 
-**Authentication > Users > Add user > Create new user** in Supabase:
-- Their email.
-- A starting password.
-- Auto Confirm on.
+Send them the link and your username:
 
-Their profile is created automatically. Then send them:
+> Open https://YOUR-APP.vercel.app in Safari. Tap Share, then Add to Home Screen. Open Pulse from your home screen (not Safari), tap "Create an account", and set up. Allow notifications when it asks. Then add me: my username is @YOURS.
 
-> Open https://YOUR-APP.vercel.app in Safari. Tap Share, then Add to Home Screen. Open Pulse from your home screen (not Safari) and sign in with your email and the password I've sent you. Allow notifications when it asks. You can change your password in Settings. Then add me: my username is @YOURS.
+The Share button on Add people (and in onboarding) sends "I'm on Pulse. Add me: @you" with the link, so people can do this themselves.
 
-They'll pick a username while they set up. Nobody sees them, and they see nobody, until someone in the circle accepts them or they accept someone.
+You can still add someone in the dashboard instead (**Authentication > Users > Add user > Create new user**, with Auto Confirm on) and send them a starting password. Either way they pick a username while they set up, and see nobody until someone accepts them.
 
 If someone forgets their password, set a new one in **SQL Editor** and send it to them:
 
@@ -159,7 +156,7 @@ components/
   Patterns.js               My Week's "Your patterns": 11 cards over the last 4 weeks.
 screens/
   InstallScreen.js          iPhone in Safari: how to add to the home screen.
-  SignInScreen.js           Email and password.
+  SignInScreen.js           Email and password: sign in, or create an account.
   OnboardingScreen.js       Welcome, name, username, level, add your people, notifications.
   UsernameScreen.js         Once, for anyone onboarded before usernames existed.
   PeopleScreen.js           Add people: your username to share, and FindPeople.
