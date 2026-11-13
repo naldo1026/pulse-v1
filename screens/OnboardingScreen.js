@@ -12,6 +12,7 @@ import UsernameField from "../components/UsernameField";
 import FindPeople, { ShareUsername } from "../components/FindPeople";
 import Icon from "../components/Icon";
 import LightStreak from "../components/LightStreak";
+import { LegalLinks } from "../components/LegalModal";
 
 function FadeStep({ step, children }) {
   const fade = useSharedValue(0);
@@ -93,6 +94,7 @@ export default function OnboardingScreen({ initialName, initialUsername, saveUse
               </Text>
             </View>
             <Btn onPress={() => setStep(1)}>Get started</Btn>
+            <LegalLinks lead="By continuing, you agree to our" style={{ marginTop: 14, marginHorizontal: 8 }} />
           </View>
         )}
 

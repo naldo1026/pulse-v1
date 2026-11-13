@@ -128,6 +128,9 @@ lib/api.js                  Every read and write, mapped to the shapes screens u
 lib/push.js                 Web push permission and subscription.
 lib/pwa.js                  Install detection, service worker, notification deep links.
 lib/seen.js                 What My Week last showed on this phone, for the tab dot.
+lib/legal/                  About, Privacy policy and Terms of use as structured text,
+                            versioned and dated. Privacy and Terms are drafts until signed
+                            off; [●] marks facts still to confirm.
 lib/haptics.js              Haptic tick/tap, no-ops on web.
 components/
   primitives.js             Btn, Label, Panel, Chip, Display (bold heading), Segmented,
@@ -144,6 +147,8 @@ components/
   UsernameField.js          The @username input. Lowercases and strips as you type.
   FindPeople.js             Find by exact username, ask, accept, decline, cancel. Also
                             ShareUsername: your @username and a Share button.
+  LegalDoc.js               Draws one lib/legal document, with a contents list that jumps.
+  LegalModal.js             About, Privacy and Terms before sign-in, and the links to them.
   Sheet.js                  Bottom sheet used by CheckInSheet, VibeCheckModal, DoodlePicker
                             and DaySheet. swipeToClose lets a drag on its handle close it.
   DaySheet.js               My Week: one day's level changes, check-in and pulses.
@@ -166,8 +171,9 @@ screens/
   WeekScreen.js             My Week: day bars, gauges (saw people, alone time, up for
                             chill), how the week felt, key numbers, tags. All from
                             lib/insights.js.
-  SettingsScreen.js         Name, username, password, your circle, notifications, colours,
-                            morning check-in, personality type, songs, sign out.
+  SettingsScreen.js         Tabs: Settings (name, username, password, your circle,
+                            notifications, colours, morning check-in, personality type,
+                            songs, sign out), About, Privacy, Terms.
 App.js                      Gates (install, sign-in, onboarding, username), app state, saving,
                             realtime, deep links.
 supabase/
