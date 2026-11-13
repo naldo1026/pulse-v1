@@ -97,7 +97,7 @@ export default function SignInScreen() {
             Forgot your password? Tell whoever sent you Pulse.
           </Text>
         )}
-        <LegalLinks style={{ marginTop: 14 }} />
+        <LegalLinks lead={creating ? "By creating an account, you agree to our" : null} style={{ marginTop: 14 }} />
       </View>
     </View>
   );
