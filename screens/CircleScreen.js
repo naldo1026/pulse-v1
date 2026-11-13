@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, Dimensions, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, FONTS, T } from "../theme";
-import { GROUPS, statusFor } from "../lib/data";
+import { GROUPS, statusFor, colorFor } from "../lib/data";
 import { noteFor } from "../lib/api";
 import { Btn, Panel, Display, Segmented } from "../components/primitives";
 import Orb from "../components/Orb";
@@ -94,7 +94,8 @@ function PersonPanel({ p, pulse, markSeen, joined, join, pickDoodle, onHeaderPre
 
 // pulses: sender id -> { id, seen } for pulses sent to you today.
 // joined: person id -> "in" | "maybe".
-function CirclePage({ people, me, pulses, markSeen, joined, join, pickDoodle, focus, openSettings, width }) {
+// nobody: your whole circle is empty, not just this group.
+function CirclePage({ people, me, pulses, markSeen, joined, join, pickDoodle, focus, openSettings, openPeople, nobody, width }) {
   const t = useTheme();
   const [sel, setSel] = useState(null);
   const chosen = sel ? people.find((p) => p.id === sel) : null;
@@ -177,7 +178,9 @@ function CirclePage({ people, me, pulses, markSeen, joined, join, pickDoodle, fo
       {summary}
 
       {people.length === 0 && (
-        <Btn variant="secondary" onPress={openSettings} style={{ marginTop: 16, alignSelf: "center", paddingVertical: 11 }}>Move someone here</Btn>
+        <Btn variant="secondary" onPress={nobody ? openPeople : openSettings} style={{ marginTop: 16, alignSelf: "center", paddingVertical: 11 }}>
+          {nobody ? "Add people" : "Move someone here"}
+        </Btn>
       )}
 
       {chosen && panelFor(chosen, { style: { marginTop: 20 } })}
@@ -185,9 +188,14 @@ function CirclePage({ people, me, pulses, markSeen, joined, join, pickDoodle, fo
   );
 }
 
+// "Keanen wants to add you", "Keanen and Sam want to add you", "Keanen and
+// 2 others want to add you".
+const askedLine = (names) => (names.length === 1 ? `${names[0]} wants to add you`
+  : `${names[0]} and ${names.length === 2 ? names[1] : `${names.length - 1} others`} want to add you`);
+
 // focus: { id } from a notification tap. Jumps to that person's group and
-// opens them.
-export default function CircleScreen({ people, pulses, markSeen, nudge, setDoodle, focus, level, reason, wantsChat, myWindow, openSettings, onPicking }) {
+// opens them. asking: names of people waiting for you to accept.
+export default function CircleScreen({ people, pulses, markSeen, nudge, setDoodle, focus, level, reason, wantsChat, myWindow, openSettings, openPeople, asking, onPicking }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [joined, setJoined] = useState({});
@@ -237,10 +245,28 @@ export default function CircleScreen({ people, pulses, markSeen, nudge, setDoodl
       <LightStreak level={level} />
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: insets.top + 8, paddingHorizontal: 24 }}>
         <Display size={24}>Circle</Display>
-        <Pressable onPress={openSettings} hitSlop={12} accessibilityRole="button" accessibilityLabel="Settings">
-          <Icon name="settings" color={t.muted} />
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 20 }}>
+          <Pressable onPress={openPeople} hitSlop={12} accessibilityRole="button" accessibilityLabel={asking.length ? "Add people, someone's asked to add you" : "Add people"}>
+            <Icon name="addPerson" color={t.muted} />
+            {asking.length > 0 && (
+              <View style={{ position: "absolute", top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: colorFor(85), borderWidth: 1.5, borderColor: t.bg }} />
+            )}
+          </Pressable>
+          <Pressable onPress={openSettings} hitSlop={12} accessibilityRole="button" accessibilityLabel="Settings">
+            <Icon name="settings" color={t.muted} />
+          </Pressable>
+        </View>
       </View>
+
+      {asking.length > 0 && (
+        <Pressable onPress={openPeople} accessibilityRole="button" style={{ marginHorizontal: 24, marginTop: 16 }}>
+          <Panel style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 16 }}>
+            <Text numberOfLines={2} style={{ flex: 1, fontFamily: FONTS.medium, fontSize: T.body, color: t.ink }}>{askedLine(asking)}</Text>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, color: t.muted }}>See</Text>
+            <Icon name="chevron" size={16} color={t.faint} />
+          </Panel>
+        </Pressable>
+      )}
 
       <Segmented
         options={GROUPS.map((g, i) => [i, g.label])}
@@ -259,7 +285,8 @@ export default function CircleScreen({ people, pulses, markSeen, nudge, setDoodl
         {GROUPS.map((g) => (
           <CirclePage
             key={g.id} people={people.filter((p) => p.g === g.id)} me={me}
-            pulses={pulses} markSeen={markSeen} joined={joined} join={join} pickDoodle={setPicking} focus={focus} openSettings={openSettings} width={width}
+            pulses={pulses} markSeen={markSeen} joined={joined} join={join} pickDoodle={setPicking} focus={focus}
+            openSettings={openSettings} openPeople={openPeople} nobody={!people.length} width={width}
           />
         ))}
       </ScrollView>

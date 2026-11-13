@@ -1,6 +1,7 @@
--- Proves nobody else can see or change your check-ins and change reasons, and
--- that today's rotating question stays put. Local stack only: it adds two
--- users, then rolls everything back. Run it with the stack up:
+-- Proves nobody else can see or change your check-ins and change reasons,
+-- that today's rotating question stays put, and that only your circle sees
+-- your level, pulses and seen marks. Local stack only: it adds three users,
+-- then rolls everything back. Run it with the stack up:
 --
 --   docker exec -i supabase_db_pulse psql -U postgres -v ON_ERROR_STOP=1 < supabase/tests/rls_check.sql
 --
@@ -69,6 +70,7 @@ do $$
 declare
   user_a constant uuid := '00000000-0000-0000-0000-00000000000a';
   user_b constant uuid := '00000000-0000-0000-0000-00000000000b';
+  user_c constant uuid := '00000000-0000-0000-0000-00000000000c';
   day1 constant date := '2026-01-01';
   day2 constant date := '2026-01-02';
   day3 constant date := '2026-01-03';
@@ -83,6 +85,8 @@ declare
   check_in_a_day2 uuid;
   saved_again uuid;
   check_in_b uuid;
+  pulse_a uuid;
+  pulse_b uuid;
 begin
   -- ----------------------------------------------------------------- setup
 
@@ -299,6 +303,145 @@ begin
     'the questions are untouched'
   );
 
+
+  -- ---------------------------------------------------------------- circles
+
+  insert into auth.users (id, email) values (user_c, 'c@example.test');
+  update public.profiles set username = 'alex', phone = '447700900001' where id = user_a;
+  update public.profiles set username = 'bea' where id = user_b;
+  update public.profiles set username = 'cal', level = 70 where id = user_c;
+
+  perform pg_temp.sign_in(user_a);
+
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.profiles') = 1, 'with nobody in their circle, A reads only their own profile');
+  perform pg_temp.expect(
+    pg_temp.error_of(format('insert into public.nudges (to_id, kind) values (%L, ''ask'')', user_b)) = '42501',
+    'A can''t nudge someone outside their circle'
+  );
+
+  perform pg_temp.expect(pg_temp.error_of(format('update public.profiles set username = ''bea'' where id = %L', user_a)) = '23505', 'a taken username is refused');
+  perform pg_temp.expect(pg_temp.error_of(format('update public.profiles set username = ''Alex'' where id = %L', user_a)) = '23514', 'a username with capitals is refused');
+  perform pg_temp.expect(pg_temp.error_of(format('update public.profiles set username = ''al'' where id = %L', user_a)) = '23514', 'a username under 3 characters is refused');
+
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.find_person(''be'')') = 0, 'part of a username finds nobody');
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.find_person(''alex'')') = 0, 'you don''t find yourself');
+  perform pg_temp.expect(
+    (select display_name = 'B' and state is null from public.find_person(' @Bea ')),
+    'an exact username finds them, ignoring @, capitals and spaces'
+  );
+
+  -- A asks B.
+  perform pg_temp.expect(public.ask_to_connect(user_b) = 'asked', 'A asks B');
+  perform pg_temp.expect(public.ask_to_connect(user_b) = 'asked', 'asking twice is harmless');
+  perform pg_temp.expect((select state from public.find_person('bea')) = 'asked', 'A sees B as asked');
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.my_requests() where not incoming') = 1, 'A sees one request going out');
+  perform pg_temp.expect(pg_temp.row_total(format('select 1 from public.profiles where id = %L', user_b)) = 0, 'asking doesn''t show A B''s level');
+  perform pg_temp.expect(
+    pg_temp.error_of(format('insert into public.circle_requests (from_id, to_id) values (%L, %L)', user_a, user_c)) = '42501',
+    'nobody inserts a request directly'
+  );
+  perform pg_temp.expect(
+    pg_temp.error_of(format('insert into public.connections (user_id, friend_id) values (%L, %L)', user_a, user_c)) = '42501',
+    'nobody inserts a connection directly'
+  );
+
+  perform pg_temp.sign_in(user_b);
+  perform pg_temp.expect(pg_temp.row_total(format('select 1 from public.profiles where id = %L', user_a)) = 0, 'being asked doesn''t show B A''s level either');
+  perform pg_temp.expect((select username from public.my_requests() where incoming) = 'alex', 'B sees who asked');
+  perform pg_temp.expect((select state from public.find_person('alex')) = 'asked_you', 'B sees A as asked_you');
+  perform pg_temp.expect(public.ask_to_connect(user_a) = 'connected', 'B accepts');
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.my_requests()') = 0, 'the request is gone once accepted');
+  perform pg_temp.expect((select level from public.profiles where id = user_a) = 60, 'B reads A''s level');
+  perform pg_temp.expect((select phone from public.profiles where id = user_a) = '447700900001', 'B reads A''s WhatsApp number');
+  perform pg_temp.expect(pg_temp.changed('delete from public.connections') = 0, 'B''s delete of connections changes nothing');
+
+  perform pg_temp.sign_in(user_a);
+  perform pg_temp.expect((select level from public.profiles where id = user_b) = 30, 'A reads B''s level');
+  perform pg_temp.expect((select state from public.find_person('bea')) = 'connected', 'A sees B as connected');
+
+  perform pg_temp.sign_in(user_c);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.profiles') = 1, 'C, outside the circle, still reads only their own profile');
+  perform pg_temp.expect(
+    pg_temp.row_total(format('select 1 from public.profiles where id = %L and phone is not null', user_a)) = 0,
+    'C can''t read A''s WhatsApp number'
+  );
+
+  -- Pulses and seen marks.
+  perform pg_temp.sign_in(user_a);
+  insert into public.pulses (level, groups) values (60, array['household', 'family', 'friends']) returning id into pulse_a;
+  perform pg_temp.expect((select recipient_ids from public.pulses where id = pulse_a) = array[user_b], 'A''s pulse reaches B, and not C');
+  perform pg_temp.expect(
+    pg_temp.error_of(format('insert into public.nudges (to_id, kind) values (%L, ''in'')', user_b)) is null,
+    'A can nudge B now'
+  );
+
+  perform pg_temp.sign_in(user_c);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.pulses') = 0, 'C reads no pulses');
+  perform pg_temp.expect(
+    pg_temp.error_of(format('insert into public.pulse_seen (pulse_id) values (%L)', pulse_a)) = '42501',
+    'C can''t mark A''s pulse seen'
+  );
+
+  perform pg_temp.sign_in(user_b);
+  perform pg_temp.expect(pg_temp.row_total(format('select 1 from public.pulses where id = %L', pulse_a)) = 1, 'B reads the pulse sent to them');
+  insert into public.pulse_seen (pulse_id) values (pulse_a);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.pulse_seen') = 1, 'B marks it seen');
+  insert into public.groupings (member_id, grp) values (user_a, 'household');
+  insert into public.pulses (level, groups) values (30, array['family']) returning id into pulse_b;
+  perform pg_temp.expect(cardinality((select recipient_ids from public.pulses where id = pulse_b)) = 0, 'a pulse only reaches the groups chosen');
+
+  perform pg_temp.sign_in(user_a);
+  perform pg_temp.expect(
+    pg_temp.row_total(format('select 1 from public.pulse_seen where pulse_id = %L and viewer_id = %L', pulse_a, user_b)) = 1,
+    'A sees that B saw it'
+  );
+  perform pg_temp.expect(pg_temp.row_total(format('select 1 from public.pulses where id = %L', pulse_b)) = 0, 'A doesn''t read a pulse that didn''t reach them');
+
+  perform pg_temp.sign_in(user_c);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.pulse_seen') = 0, 'C reads no seen marks');
+
+  -- Declining.
+  perform pg_temp.expect(public.ask_to_connect(user_b) = 'asked', 'C asks B');
+  perform pg_temp.sign_in(user_b);
+  perform public.decline_request(user_c);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.my_requests()') = 0, 'a declined request disappears for B');
+  perform pg_temp.expect((select state from public.find_person('cal')) is null, 'and C looks like a stranger to B');
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.circle_declines') = 0, 'nobody reads declines through the API');
+
+  perform pg_temp.sign_in(user_c);
+  perform pg_temp.expect((select state from public.find_person('bea')) = 'asked', 'C still sees B as asked');
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.circle_declines') = 0, 'C can''t see the decline either');
+  perform public.cancel_request(user_b);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.my_requests()') = 0, 'C cancels');
+  perform pg_temp.expect(public.ask_to_connect(user_b) = 'asked', 'C asks again');
+
+  perform pg_temp.sign_in(user_b);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.my_requests()') = 0, 'asking again still doesn''t reach B');
+  perform pg_temp.expect(public.ask_to_connect(user_c) = 'connected', 'B can still add C themselves');
+  perform pg_temp.expect((select level from public.profiles where id = user_c) = 70, 'and then reads C''s level');
+
+  -- Removing.
+  perform public.remove_from_circle(user_c);
+  perform pg_temp.expect(pg_temp.row_total(format('select 1 from public.profiles where id = %L', user_c)) = 0, 'removing C hides C from B');
+  perform pg_temp.sign_in(user_c);
+  perform pg_temp.expect(pg_temp.row_total(format('select 1 from public.profiles where id = %L', user_b)) = 0, 'and hides B from C');
+  perform pg_temp.expect(public.ask_to_connect(user_b) = 'asked', 'C can ask again');
+  perform pg_temp.sign_in(user_b);
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.my_requests()') = 0, 'but it doesn''t reach B, who removed them');
+
+  perform pg_temp.sign_in(user_a);
+  perform pg_temp.expect((select level from public.profiles where id = user_b) = 30, 'B removing C leaves A and B connected');
+
+  perform pg_temp.sign_out();
+  perform pg_temp.expect(pg_temp.row_total('select 1 from public.profiles') = 0, 'signed out reads no profiles');
+  perform pg_temp.expect(pg_temp.error_of('select public.find_person(''bea'')') = '42501', 'signed out can''t call find_person');
+
+  perform pg_temp.admin();
+  perform pg_temp.expect(
+    (select count(*) from public.circle_declines where owner_id = user_b and from_id = user_c) = 1,
+    'B''s decline of C is on record, so notify won''t push C''s asks'
+  );
+
   -- ---------------------------------------------------------------- catalog
 
   perform pg_temp.expect(
@@ -321,6 +464,32 @@ begin
     not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public'
       and tablename in ('check_in_questions', 'check_ins', 'check_in_answers', 'level_reasons')),
     'none of the new tables are in the realtime publication'
+  );
+
+  perform pg_temp.expect(
+    (select count(*) from pg_class
+      where oid in ('public.circle_requests'::regclass, 'public.circle_declines'::regclass, 'public.connections'::regclass)
+        and relrowsecurity) = 3,
+    'RLS is on for the 3 circle tables'
+  );
+  perform pg_temp.expect(
+    not has_function_privilege('anon', 'public.find_person(text)', 'execute')
+      and not has_function_privilege('anon', 'public.my_requests()', 'execute')
+      and not has_function_privilege('anon', 'public.ask_to_connect(uuid)', 'execute')
+      and not has_function_privilege('anon', 'public.decline_request(uuid)', 'execute')
+      and not has_function_privilege('anon', 'public.cancel_request(uuid)', 'execute')
+      and not has_function_privilege('anon', 'public.remove_from_circle(uuid)', 'execute'),
+    'no circle function is granted to signed-out users'
+  );
+  perform pg_temp.expect(
+    pg_get_function_result('public.find_person(text)'::regprocedure) = 'TABLE(id uuid, username text, display_name text, state text)',
+    'find_person returns a name and username, nothing else'
+  );
+  perform pg_temp.expect(
+    (select count(*) from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public'
+      and tablename in ('circle_requests', 'connections')) = 2
+      and not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'circle_declines'),
+    'requests and connections are live, declines aren''t'
   );
 
   raise notice 'rls_check passed';

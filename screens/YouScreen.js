@@ -106,7 +106,7 @@ export default function YouScreen({
               ? "Sent"
               : waiting
                 ? `Send again at ${nextSendAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
-                : canSend ? "Send pulse" : "Choose who to send to"}
+                : canSend ? "Send pulse" : members.length ? "Choose who to send to" : "Add people to send a pulse"}
           </Btn>
         </Animated.View>
 
