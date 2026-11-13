@@ -15,6 +15,13 @@ const SHAPES = {
   check: <Path d="M5 12.5l4.5 4.5L19 7.5" />,
   plus: <Path d="M12 5v14M5 12h14" />,
   chevron: <Path d="M9 6l6 6-6 6" />,
+  // someone with a plus, for adding to your circle
+  addPerson: (
+    <>
+      <Circle cx={10} cy={8} r={3.5} />
+      <Path d="M3.5 19.5c.8-3.4 3.4-5.5 6.5-5.5s5.7 2.1 6.5 5.5M18.5 8v6M15.5 11h6" />
+    </>
+  ),
   back: <Path d="M15 6l-6 6 6 6" />,
   // the iOS share glyph, for the install steps
   share: <Path d="M12 3v12M8 7l4-4 4 4M7 11H6a1 1 0 00-1 1v8a1 1 0 001 1h12a1 1 0 001-1v-8a1 1 0 00-1-1h-1" />,

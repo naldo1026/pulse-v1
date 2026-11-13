@@ -27,10 +27,11 @@ home-screen web app (Vercel) ── supabase-js ──> Supabase Postgres (RLS o
                                                    └── web push (VAPID) ──> phone ──> public/sw.js
 ```
 
-- **Data:** the app reads and writes Supabase directly. Everyone signed in can see everyone's level. You can only change your own rows.
-- **Live updates:** Supabase Realtime tells the app when anyone's level, pulse or seen mark changes, and the app refetches. It also refetches when it comes back to the front, because iOS drops the connection in the background.
-- **Pulses:** sending one inserts a row in `pulses`. A trigger works out the recipients from your groups (anyone you haven't sorted counts as Friends) and calls `notify`, which pushes to their phones. Another trigger allows one pulse an hour per person, and the app shows when you can send again.
-- **WhatsApp:** people can add a number in Settings. The Circle shows a "Message on WhatsApp" button with a drafted message when someone's low with "Open to a chat" on, or has an "I'm around" window. Without a number, WhatsApp asks who to send it to.
+- **Data:** the app reads and writes Supabase directly. You see your own rows and the people in your circle, nobody else. You can only change your own rows.
+- **Circles:** everyone has a username. You find someone by typing their exact username (part of one finds nobody, so nobody can list everyone on Pulse) and ask to add them. They get a push and accept or decline. Accepting puts you in each other's circles, and only then do you see each other's level, pulses, seen marks and WhatsApp number. Declining doesn't tell the person who asked: it still looks pending to them, and asking again doesn't buzz you. Removing someone in Settings works the same way. All of it goes through security definer functions (`find_person`, `ask_to_connect` and friends); the tables are read-only from the API.
+- **Live updates:** Supabase Realtime tells the app when a level, pulse, seen mark, request or connection it's allowed to see changes, and the app refetches. It also refetches when it comes back to the front, because iOS drops the connection in the background.
+- **Pulses:** sending one inserts a row in `pulses`. A trigger works out the recipients from your circle and the groups you picked (anyone you haven't sorted counts as Friends) and calls `notify`, which pushes to their phones. Another trigger allows one pulse an hour per person, and the app shows when you can send again.
+- **WhatsApp:** people can add a number in Settings. Only their circle can read it. The Circle shows a "Message on WhatsApp" button with a drafted message when someone's low with "Open to a chat" on, or has an "I'm around" window. Without a number, WhatsApp asks who to send it to.
 - **Doodles:** tap someone on the Circle to give them a doodle instead of their initial. It's your own label for them, stored on your `groupings` row, so only you see it.
 - **Morning check-in:** cron calls `morning` every 5 minutes. It pushes "Morning. How are you feeling?" to anyone whose check-in time just passed, once a day. Tapping it opens the app on the morning prompt. On a Monday in the person's own time zone the same push says "Morning. Your week's in." instead, and opens My Week once the check-in's done. The copy lives in `functions/morning/copy.ts`; `node scripts/morning-check.mjs` checks it.
 - **What's new on My Week:** the My Week tab gets a dot when a card has unlocked, a record's been set, a small win's appeared or a pattern's changed, or a new calendar week has started, since My Week was last opened on that phone. Opening it clears the dot, and each card that's new shows a "New" tag for that one visit. What was last seen is kept in the browser (`lib/seen.js`), not the database.
@@ -104,7 +105,9 @@ Until those two secrets exist, everything works except push.
 
 Their profile is created automatically. Then send them:
 
-> Open https://YOUR-APP.vercel.app in Safari. Tap Share, then Add to Home Screen. Open Pulse from your home screen (not Safari) and sign in with your email and the password I've sent you. Allow notifications when it asks. You can change your password in Settings.
+> Open https://YOUR-APP.vercel.app in Safari. Tap Share, then Add to Home Screen. Open Pulse from your home screen (not Safari) and sign in with your email and the password I've sent you. Allow notifications when it asks. You can change your password in Settings. Then add me: my username is @YOURS.
+
+They'll pick a username while they set up. Nobody sees them, and they see nobody, until someone in the circle accepts them or they accept someone.
 
 If someone forgets their password, set a new one in **SQL Editor** and send it to them:
 
@@ -140,7 +143,10 @@ components/
                             for them, or their initial.
   Doodle.js                 One doodle, drawn in chalk.
   DoodlePicker.js           Sheet for choosing someone's doodle.
-  PeopleEditor.js           Everyone on Pulse, each with a group picker.
+  PeopleEditor.js           Your circle in Settings: a group picker each, and Remove.
+  UsernameField.js          The @username input. Lowercases and strips as you type.
+  FindPeople.js             Find by exact username, ask, accept, decline, cancel. Also
+                            ShareUsername: your @username and a Share button.
   Sheet.js                  Bottom sheet used by CheckInSheet, VibeCheckModal, DoodlePicker
                             and DaySheet. swipeToClose lets a drag on its handle close it.
   DaySheet.js               My Week: one day's level changes, check-in and pulses.
@@ -154,21 +160,25 @@ components/
 screens/
   InstallScreen.js          iPhone in Safari: how to add to the home screen.
   SignInScreen.js           Email and password.
-  OnboardingScreen.js       Welcome, name, level, sort your people, notifications.
+  OnboardingScreen.js       Welcome, name, username, level, add your people, notifications.
+  UsernameScreen.js         Once, for anyone onboarded before usernames existed.
+  PeopleScreen.js           Add people: your username to share, and FindPeople.
   YouScreen.js              Battery, status, reasons / "I'm around", send pulse.
   CircleScreen.js           Ring of people per group (Home, Family, Friends); a list past 5.
+                            "Wants to add you" banner, and the Add people button.
   WeekScreen.js             My Week: day bars, gauges (saw people, alone time, up for
                             chill), how the week felt, key numbers, tags. All from
                             lib/insights.js.
-  SettingsScreen.js         Name, password, people, notifications, colours, morning
-                            check-in, personality type, songs, sign out.
-App.js                      Gates (install, sign-in, onboarding), app state, saving,
+  SettingsScreen.js         Name, username, password, your circle, notifications, colours,
+                            morning check-in, personality type, songs, sign out.
+App.js                      Gates (install, sign-in, onboarding, username), app state, saving,
                             realtime, deep links.
 supabase/
   migrations/               Tables, RLS, triggers, cron, realtime. The whole backend.
-  functions/notify          Pushes pulses and nudges.
+  functions/notify          Pushes pulses, nudges, circle requests and accepts.
   functions/morning         Pushes the morning check-in ("Your week's in" on Mondays).
-  tests/rls_check.sql       Checks other people can't reach your check-ins and reasons.
+  tests/rls_check.sql       Checks other people can't reach your check-ins and reasons,
+                            and only your circle sees your level, pulses and seen marks.
                             Local stack only; how to run it is at the top of the file.
 public/                     Page template, manifest, service worker (sw.js), icons.
                             Expo copies it into dist/ on export.

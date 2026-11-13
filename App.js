@@ -20,6 +20,8 @@ import YouScreen from "./screens/YouScreen";
 import CircleScreen from "./screens/CircleScreen";
 import WeekScreen from "./screens/WeekScreen";
 import SettingsScreen from "./screens/SettingsScreen";
+import PeopleScreen from "./screens/PeopleScreen";
+import UsernameScreen from "./screens/UsernameScreen";
 import PulseBurst from "./components/PulseBurst";
 import CheckInSheet from "./components/CheckInSheet";
 import VibeCheckModal from "./components/VibeCheckModal";
@@ -102,6 +104,8 @@ export default function App() {
   const uid = session?.user.id;
 
   const [people, setPeople] = useState([]);
+  // Requests waiting either way: api.myRequests().
+  const [requests, setRequests] = useState([]);
   const [toMe, setToMe] = useState({});
   const [myPulse, setMyPulse] = useState(null);
   // loadHistory's 56 days for My Week, or null until the first load.
@@ -124,6 +128,8 @@ export default function App() {
   const [myWindow, setMyWindow] = useState(null);
   const [pulseTo, setPulseTo] = useState(["household", "family", "friends"]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // A "wants to add you" notification opens straight onto Add people.
+  const [peopleOpen, setPeopleOpen] = useState(!!LAUNCH.requests);
   const [morningTime, setMorningTime] = useState("07:40");
   const [theme, setTheme] = useState("dusk");
   const [phone, setPhone] = useState("");
@@ -182,13 +188,16 @@ export default function App() {
     else setMe(null);
   }, [uid]);
 
-  // Everyone else, pulses, seen marks and the week. Small enough to refetch
-  // whole whenever anything changes or the app comes back to the front.
+  // Your circle, requests, pulses, seen marks and the week. Small enough to
+  // refetch whole whenever anything changes or the app comes back to the front.
   const refresh = useCallback(async () => {
     if (!uid) return;
     try {
-      const [ps, mine, incoming, past] = await Promise.all([api.loadPeople(uid), api.myLatestPulse(uid), api.pulsesToMe(uid), api.loadHistory(uid)]);
+      const [ps, asks, mine, incoming, past] = await Promise.all([
+        api.loadPeople(uid), api.myRequests(), api.myLatestPulse(uid), api.pulsesToMe(uid), api.loadHistory(uid),
+      ]);
       setPeople(ps);
+      setRequests(asks);
       setMyPulse(mine);
       setToMe(incoming);
       setHistory(past);
@@ -232,6 +241,8 @@ export default function App() {
     checkedInOn.current = null;
     setCheckIn(null);
     setHistory(null);
+    setPeople([]);
+    setRequests([]);
     reasonShownAt.current = 0;
     setReasonPrompt(null);
   }, [uid]);
@@ -333,6 +344,26 @@ export default function App() {
     setPeople((ps) => ps.map((p) => (p.id === id ? { ...p, g } : p)));
     api.setGroup(uid, id, g).catch(() => {});
   };
+  // Off the screen straight away. If it fails, the refetch brings them back.
+  const removePerson = (id) => {
+    setPeople((ps) => ps.filter((p) => p.id !== id));
+    api.removeFromCircle(id).catch(() => {}).finally(refresh);
+  };
+  // Resolves with null once saved, or what's wrong. extra goes along with it,
+  // like the name during onboarding.
+  const saveUsername = async (u, extra = {}) => {
+    try {
+      const problem = await api.saveUsername(uid, u, extra);
+      if (!problem) setMe((m) => ({ ...m, ...extra, username: u }));
+      return problem;
+    } catch {
+      return "Couldn't save that. Check your connection and try again.";
+    }
+  };
+  const openPeople = () => {
+    setSettingsOpen(false);
+    setPeopleOpen(true);
+  };
   const changeDoodle = (id, d) => {
     const p = people.find((x) => x.id === id);
     setPeople((ps) => ps.map((x) => (x.id === id ? { ...x, d } : x)));
@@ -425,11 +456,12 @@ export default function App() {
   }, [morning, checkIn]);
 
   // Notification taps while the app is open.
-  useEffect(() => onNotificationOpen(({ person, morning: m, week }) => {
+  useEffect(() => onNotificationOpen(({ person, morning: m, week, requests: asked }) => {
     if (m) {
       weekAfterMorning.current = week;
       setMorning(true);
     }
+    if (asked) openPeople();
     if (person) {
       setSettingsOpen(false);
       setFocus({ id: person });
@@ -485,7 +517,7 @@ export default function App() {
 
   // Prompts wait for the burst, any other sheet and a finger on the battery.
   // The burst is over well before `sent` clears.
-  const promptWaits = sent || quiz || settingsOpen || pickingDoodle || dragging;
+  const promptWaits = sent || quiz || settingsOpen || peopleOpen || pickingDoodle || dragging;
   const askingMorning = morning && !checkIn;
   const reasonHidden = promptWaits || morning || !!checkIn;
 
@@ -521,8 +553,8 @@ export default function App() {
   else if (!main) {
     screen = (
       <OnboardingScreen
-        initialName={me.display_name}
-        people={people} setGroup={changeGroup}
+        initialName={me.display_name} initialUsername={me.username} saveUsername={saveUsername}
+        requests={requests} onPeopleChanged={refresh}
         pushPerm={pushPerm} enablePush={turnOnPush}
         onFinish={({ name, level: l }) => {
           setLevel(l);
@@ -532,11 +564,14 @@ export default function App() {
         }}
       />
     );
+  } else if (!me.username) {
+    screen = <UsernameScreen name={me.display_name} saveUsername={saveUsername} />;
   } else {
+    const asking = requests.filter((r) => r.incoming).map((r) => r.n);
     screen = (
       <View style={{ flex: 1 }}>
         <NavigationContainer ref={nav} theme={navTheme} onStateChange={(s) => s && setRoute(s.routes[s.index].name)}>
-          <Tab.Navigator initialRouteName={focus ? "circle" : "you"} tabBar={(props) => <PulseTabBar {...props} dots={{ week: weekDot }} />} screenOptions={{ headerShown: false }}>
+          <Tab.Navigator initialRouteName={focus ? "circle" : "you"} tabBar={(props) => <PulseTabBar {...props} dots={{ week: weekDot, circle: route !== "circle" && asking.length > 0 }} />} screenOptions={{ headerShown: false }}>
             <Tab.Screen name="week">
               {() => <WeekScreen level={level} history={history} mbti={mbti} freshCards={freshCards} />}
             </Tab.Screen>
@@ -558,7 +593,7 @@ export default function App() {
                 <CircleScreen
                   people={people} pulses={toMe} markSeen={markSeen} nudge={nudge} setDoodle={changeDoodle} focus={focus}
                   level={level} reason={reason} wantsChat={wantsChat} myWindow={myWindow}
-                  openSettings={() => setSettingsOpen(true)} onPicking={setPickingDoodle}
+                  openSettings={() => setSettingsOpen(true)} openPeople={openPeople} asking={asking} onPicking={setPickingDoodle}
                 />
               )}
             </Tab.Screen>
@@ -569,8 +604,9 @@ export default function App() {
           <SettingsScreen
             onClose={() => setSettingsOpen(false)}
             name={me.display_name} setName={changeName}
+            username={me.username} saveUsername={saveUsername}
             phone={phone} setPhone={changePhone}
-            people={people} setGroup={changeGroup}
+            people={people} setGroup={changeGroup} removePerson={removePerson} openPeople={openPeople}
             mbti={mbti} setMbti={changeSetting(setMbti, "mbti")}
             songs={songs} setSongs={changeSetting(setSongs, "songs")}
             spotify={spotify} setSpotify={changeSetting(setSpotify, "spotify")}
@@ -578,6 +614,9 @@ export default function App() {
             theme={theme} setTheme={changeSetting(setTheme, "theme")}
             pushPerm={pushPerm} enablePush={turnOnPush} changePassword={changePassword} signOut={signOut}
           />
+        )}
+        {peopleOpen && (
+          <PeopleScreen onClose={() => setPeopleOpen(false)} username={me.username} requests={requests} onChanged={refresh} />
         )}
         {reasonPrompt && (
           <ReasonCard

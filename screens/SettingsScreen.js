@@ -5,7 +5,9 @@ import { useTheme, FONTS, T } from "../theme";
 import { MBTI, DONT_KNOW, TYPE_TEST_URL, THEMES, LIBRARY, stopsFor } from "../lib/data";
 import { Btn, Label, Panel, Display, Segmented, Toggle } from "../components/primitives";
 import PeopleEditor from "../components/PeopleEditor";
+import UsernameField from "../components/UsernameField";
 import Icon from "../components/Icon";
+import { usernameOk } from "../lib/api";
 
 const TIMES = [["07:00", "7:00"], ["07:40", "7:40"], ["08:30", "8:30"], ["off", "Off"]];
 const MOODS = [["low", "When you're low"], ["mid", "In between"], ["high", "When you're full"]];
@@ -17,7 +19,7 @@ const PUSH_NOTE = {
   default: "Pulses from your people, plus the morning check-in.",
 };
 
-const PHONE_NOTE = "Optional. Lets people message you on WhatsApp when you're open to a chat or around.";
+const PHONE_NOTE = "Optional. Lets your circle message you on WhatsApp when you're open to a chat or around.";
 
 // What someone typed -> digits with the country code first, "" to clear,
 // or null if it can't be a full international number.
@@ -40,8 +42,10 @@ function Section({ title, children, note }) {
   );
 }
 
+// saveUsername resolves with null once saved, or what's wrong.
 export default function SettingsScreen({
-  onClose, name, setName, phone, setPhone, people, setGroup, mbti, setMbti, songs, setSongs, spotify, setSpotify,
+  onClose, name, setName, username, saveUsername, phone, setPhone, people, setGroup, removePerson, openPeople,
+  mbti, setMbti, songs, setSongs, spotify, setSpotify,
   morningTime, setMorningTime, theme, setTheme, pushPerm, enablePush, changePassword, signOut,
 }) {
   const t = useTheme();
@@ -51,6 +55,14 @@ export default function SettingsScreen({
   const saveName = () => {
     if (draft.trim() && draft.trim() !== name) setName(draft.trim());
     else setDraft(name);
+  };
+  const [userDraft, setUserDraft] = useState(username || "");
+  const [userNote, setUserNote] = useState(null);
+  const saveUser = async () => {
+    if (userDraft === username) return setUserNote(null);
+    if (!usernameOk(userDraft)) return setUserNote("3 to 20 letters, numbers or _.");
+    const problem = await saveUsername(userDraft);
+    setUserNote(problem || "Saved.");
   };
   const [phoneDraft, setPhoneDraft] = useState(phone ? `+${phone}` : "");
   const [phoneNote, setPhoneNote] = useState(null);
@@ -93,6 +105,12 @@ export default function SettingsScreen({
             />
           </Section>
 
+          <Section title="Your username" note={userNote || "People add you to their circle with it."}>
+            <UsernameField
+              value={userDraft} onChangeText={(v) => { setUserDraft(v); setUserNote(null); }} onBlur={saveUser} onSubmitEditing={saveUser}
+            />
+          </Section>
+
           <Section title="WhatsApp number" note={phoneNote || PHONE_NOTE}>
             <TextInput
               value={phoneDraft} onChangeText={(v) => { setPhoneDraft(v); setPhoneNote(null); }} onBlur={savePhone} onSubmitEditing={savePhone}
@@ -102,7 +120,7 @@ export default function SettingsScreen({
             />
           </Section>
 
-          <Section title="Password" note={pwNote || "Swap the one you were given for your own."}>
+          <Section title="Password" note={pwNote || "Change the password you sign in with."}>
             <View style={{ flexDirection: "row", gap: 8 }}>
               <TextInput
                 value={pw} onChangeText={(v) => { setPw(v); setPwNote(null); }} onSubmitEditing={savePassword}
@@ -114,10 +132,14 @@ export default function SettingsScreen({
             </View>
           </Section>
 
-          <Section title="People" note="Everyone on Pulse sees your level. Groups decide whose phones buzz when you send a pulse.">
+          <Section title="Your circle">
             <Panel style={{ paddingVertical: 6 }}>
-              <PeopleEditor people={people} setGroup={setGroup} />
+              <PeopleEditor people={people} setGroup={setGroup} remove={removePerson} />
             </Panel>
+            <Text style={{ fontFamily: FONTS.sans, fontSize: T.small, lineHeight: 18, color: t.faint, marginTop: 8, marginHorizontal: 4 }}>
+              Only people in your circle see your level. Groups decide whose phones buzz when you send a pulse.
+            </Text>
+            <Btn variant="secondary" onPress={openPeople} style={{ marginTop: 14 }}>Add people</Btn>
           </Section>
 
           <Section title="Notifications" note={PUSH_NOTE[pushPerm]}>
@@ -219,7 +241,7 @@ export default function SettingsScreen({
           <Btn variant="ghost" onPress={signOut} style={{ marginTop: 28 }}>Sign out</Btn>
 
           <Text style={{ fontFamily: FONTS.sans, fontSize: T.caption, color: t.faint, textAlign: "center", marginTop: 12 }}>
-            Only people on Pulse see your level.
+            Only people in your circle see your level.
           </Text>
         </ScrollView>
       </View>
